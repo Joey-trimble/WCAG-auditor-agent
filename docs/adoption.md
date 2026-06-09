@@ -71,11 +71,20 @@ npx a11y-auditor review   # regenerate brief without re-scanning
 - **SARIF:** add `'sarif'` to `output.formats` for GitHub Code Scanning
 - **Waivers:** `a11y-waivers.json` — see [enterprise.md](./enterprise.md)
 
+## Static analysis (Phase 5)
+
+```bash
+npm install -D eslint eslint-plugin-jsx-a11y
+```
+
+Enable `static: { enabled: true }` in config — see [static-analysis.md](./static-analysis.md).
+
 ## Full W3C context (Phase 6)
 
 - **`wcag-context.json`** — auto-generated hierarchy for AI agents
-- **Upgraded Cursor skill** — run `npx a11y-auditor init` to get `wcag-hierarchy.md` and `wcag-22-new-criteria.md`
-- **Versions:** pin `github:Joey-trimble/WCAG-auditor-agent#v1.6.0`
+- **Grouped violations** — fix patterns once across routes
+- **Baseline diff** — `npx a11y-auditor audit --baseline ./a11y-reports/baseline.json`
+- **Versions:** pin `github:Joey-trimble/WCAG-auditor-agent#v1.7.0`
 
 ## 5. CI
 

@@ -45,6 +45,14 @@ export type AuditorConfig = {
     behavioral?: {
         enabled?: boolean;
     };
+    static?: {
+        enabled?: boolean;
+        globs?: string[];
+        eslintConfig?: string;
+    };
+    baseline?: {
+        file?: string;
+    };
     waivers?: {
         file?: string;
     };
@@ -110,13 +118,39 @@ export type AuditFinding = {
     routeName?: string;
     variant: PageVariant;
     scenario?: string;
-    source: 'axe' | 'keyboard' | 'behavioral';
+    source: 'axe' | 'keyboard' | 'behavioral' | 'static';
     criterionTitle?: string;
     w3c?: W3cLinks;
     guidance?: CriterionGuidance;
+    filePath?: string;
+    line?: number;
+    column?: number;
     waived?: boolean;
     waiverId?: string;
     waiverReason?: string;
+};
+export type FindingGroup = {
+    key: string;
+    rule: string;
+    criterionId: string;
+    criterionTitle?: string;
+    impact: Impact;
+    summary: string;
+    instanceCount: number;
+    routes: string[];
+    selectors: string[];
+    sources: AuditFinding['source'][];
+    filePaths: string[];
+    instances: AuditFinding[];
+};
+export type BaselineDiff = {
+    baselineTimestamp: string;
+    newCount: number;
+    fixedCount: number;
+    violationDelta: number;
+    regressed: boolean;
+    newFindings: AuditFinding[];
+    fixedFindings: AuditFinding[];
 };
 export type RouteResult = {
     path: string;
@@ -153,6 +187,12 @@ export type AuditReport = {
         expired: WaiverEntry[];
     };
     findings: AuditFinding[];
+    findingGroups?: FindingGroup[];
+    baselineDiff?: BaselineDiff;
+    staticAudit?: {
+        filesScanned: number;
+        warnings: string[];
+    };
     routes: RouteResult[];
     keyboardAudit?: {
         focusOrder: string[];

@@ -44,6 +44,14 @@ export async function runBehavioralChecks(
     await checkReflow(page, config, factoryCtx, findings, passedCriteria, passedChecks, ctx.variant);
   }
 
+  if (ctx.variant === 'reduced-motion') {
+    await checkReducedMotion(page, config, factoryCtx, findings, passedCriteria, passedChecks);
+  }
+
+  if (ctx.variant === 'default' && !ctx.scenario) {
+    await checkFormErrors(page, config, factoryCtx, findings, passedCriteria, passedChecks);
+  }
+
   return { findings, passedCriteria, passedChecks };
 }
 
@@ -526,6 +534,132 @@ async function checkReflow(
     if (originalSize) {
       await page.setViewportSize(originalSize);
     }
+  }
+}
+
+async function checkReducedMotion(
+  page: Page,
+  config: AuditorConfig,
+  ctx: Parameters<typeof createFinding>[1],
+  findings: AuditFinding[],
+  passed: string[],
+  passedChecks: string[],
+): Promise<void> {
+  const animatedCount = await page.evaluate(() => {
+    let count = 0;
+    for (const el of document.querySelectorAll('*')) {
+      const style = window.getComputedStyle(el);
+      const anim = parseFloat(style.animationDuration) || 0;
+      const trans = parseFloat(style.transitionDuration) || 0;
+      if (anim > 0.01 || trans > 0.3) {
+        count++;
+      }
+    }
+    return count;
+  });
+
+  if (animatedCount > 5) {
+    findings.push(
+      createFinding(config, ctx, {
+        rule: 'behavioral-reduced-motion',
+        summary: 'Animations may not respect prefers-reduced-motion',
+        description: `${animatedCount} elements have active animations/transitions while reduced-motion is enabled. WCAG 2.3.3 requires motion effects can be disabled.`,
+        selector: 'html',
+        criteria: ['2.3.3'],
+        impact: 'moderate',
+        remediation: 'Use @media (prefers-reduced-motion: reduce) to disable or reduce animations.',
+        needsManualReview: true,
+      }),
+    );
+    return;
+  }
+
+  passed.push('2.3.3');
+  passedChecks.push('behavioral-reduced-motion');
+}
+
+async function checkFormErrors(
+  page: Page,
+  config: AuditorConfig,
+  ctx: Parameters<typeof createFinding>[1],
+  findings: AuditFinding[],
+  passed: string[],
+  passedChecks: string[],
+): Promise<void> {
+  const hasForm = await page.evaluate(() => document.querySelectorAll('form').length > 0);
+  if (!hasForm) {
+    return;
+  }
+
+  const submitButton = page.locator('form button[type="submit"], form input[type="submit"]').first();
+  const submitExists = (await submitButton.count()) > 0;
+
+  if (!submitExists) {
+    return;
+  }
+
+  await submitButton.click({ timeout: 3000 }).catch(() => undefined);
+  await page.waitForTimeout(500);
+
+  const errorState = await page.evaluate(() => {
+    const invalidFields = [...document.querySelectorAll('[aria-invalid="true"], input:invalid, select:invalid, textarea:invalid')];
+    const errorMessages = [...document.querySelectorAll('[role="alert"], .error, [class*="error"], [id*="error"]')].filter(
+      (el) => (el.textContent ?? '').trim().length > 0,
+    );
+
+    return {
+      invalidCount: invalidFields.length,
+      errorMessageCount: errorMessages.length,
+      unlinkedInvalid: invalidFields.filter((field) => {
+        const id = field.getAttribute('id');
+        const describedBy = field.getAttribute('aria-describedby');
+        if (describedBy) {
+          return false;
+        }
+        if (id) {
+          const label = document.querySelector(`label[for="${id}"]`);
+          const err = document.querySelector(`[id="${id}-error"], [aria-describedby*="${id}"]`);
+          return !label && !err;
+        }
+        return true;
+      }).length,
+    };
+  });
+
+  if (errorState.invalidCount > 0 && errorState.errorMessageCount === 0) {
+    findings.push(
+      createFinding(config, ctx, {
+        rule: 'behavioral-form-errors',
+        summary: 'Invalid fields without visible error messages',
+        description: `${errorState.invalidCount} invalid field(s) found after submit but no error text detected. WCAG 3.3.1 requires errors be identified in text.`,
+        selector: 'form',
+        criteria: ['3.3.1'],
+        impact: 'serious',
+        remediation: 'Display text error messages and associate them with fields via aria-describedby.',
+      }),
+    );
+    return;
+  }
+
+  if (errorState.unlinkedInvalid > 0) {
+    findings.push(
+      createFinding(config, ctx, {
+        rule: 'behavioral-form-error-association',
+        summary: 'Invalid fields may lack programmatic error association',
+        description: `${errorState.unlinkedInvalid} invalid field(s) without aria-describedby or linked error element.`,
+        selector: 'form',
+        criteria: ['3.3.1', '3.3.3'],
+        impact: 'moderate',
+        remediation: 'Link error messages to inputs with aria-describedby pointing to error element id.',
+        needsManualReview: true,
+      }),
+    );
+    return;
+  }
+
+  if (errorState.invalidCount > 0) {
+    passed.push('3.3.1');
+    passedChecks.push('behavioral-form-errors');
   }
 }
 

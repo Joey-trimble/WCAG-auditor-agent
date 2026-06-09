@@ -90,9 +90,7 @@ export function generateAgentReviewBrief(report: AuditReport): string {
     })
     .join('\n');
 
-  const manualSections = [...manualCriteria, ...incompleteCriteria]
-    .slice(0, 15)
-    .map((item) => {
+  const manualSections = [...manualCriteria, ...incompleteCriteria].map((item) => {
       const findings = grouped.get(item.id) ?? [];
       const guidance = item.guidance ?? getPlaybookEntry(item.id, item.title);
       return renderCriterionSection(item, findings, guidance);
@@ -135,6 +133,23 @@ export function generateAgentReviewBrief(report: AuditReport): string {
     })
     .join('\n');
 
+  const waivedFindings = report.findings.filter((f) => f.waived);
+  const findingGroups = report.findingGroups ?? [];
+  const groupedSection = findingGroups
+    .slice(0, 20)
+    .map(
+      (g) =>
+        `- **${g.impact}** ${g.summary} (\`${g.rule}\`) — **${g.instanceCount}** instance(s)\n  - Routes: ${g.routes.map((r) => `\`${r}\``).join(', ')}\n  - Selectors: ${g.selectors.slice(0, 3).map((s) => `\`${s}\``).join(', ')}${g.filePaths.length ? `\n  - Files: ${g.filePaths.slice(0, 3).map((f) => `\`${f}\``).join(', ')}` : ''}`,
+    )
+    .join('\n');
+
+  const baselineSection = report.baselineDiff
+    ? `| New issues | ${report.baselineDiff.newCount} |
+| Fixed issues | ${report.baselineDiff.fixedCount} |
+| Violation delta | ${report.baselineDiff.violationDelta >= 0 ? '+' : ''}${report.baselineDiff.violationDelta} |
+| Regressed | ${report.baselineDiff.regressed ? 'Yes' : 'No'} |`
+    : '';
+
   const w3c = report.w3cReferences;
 
   return `# Accessibility Agent Review Brief
@@ -150,8 +165,10 @@ You are reviewing accessibility audit results. For each issue:
 2. Read the **W3C Understanding** link for the success criterion
 3. Use **Agent guidance** (summary, how to test, how to fix) below
 4. For **WCAG 2.2-only** criteria, confirm the app targets WCAG 2.2 (not 2.1)
-5. Propose **concrete code changes** in the consumer's codebase (file paths, components)
-6. Do not claim full WCAG conformance — flag items needing human/screen reader verification
+5. Prefer **grouped violations** — fix the pattern once to resolve multiple instances
+6. **Do not fix waived findings** — see Waived section below
+7. Propose **concrete code changes** in the consumer's codebase (file paths, components)
+8. Do not claim full WCAG conformance — flag items needing human/screen reader verification
 
 **Machine-readable context:** \`a11y-reports/wcag-context.json\` (full hierarchy + 2.2 criteria)
 
@@ -177,6 +194,16 @@ ${checklistSummary ? `| Criteria failed | ${checklistSummary.failed} |\n| Criter
 
 ${topViolations || '_No violations detected._'}
 
+${baselineSection ? `\n### Baseline comparison (vs ${report.baselineDiff!.baselineTimestamp})\n\n| Metric | Value |\n|--------|-------|\n${baselineSection}\n` : ''}
+
+---
+
+## Grouped violation patterns (${findingGroups.length})
+
+Fix these patterns to resolve multiple instances at once:
+
+${groupedSection || '_No grouped patterns._'}
+
 ---
 
 ## Coverage by principle
@@ -192,6 +219,12 @@ ${principleSummary || '| _No checklist data_ | — | — | — | — |'}
 These success criteria are **new in WCAG 2.2** — easy to miss when upgrading from 2.1:
 
 ${wcag22Section || '_No WCAG 2.2-only criteria in scope._'}
+
+---
+
+## Waived findings — do not fix (${waivedFindings.length})
+
+${waivedFindings.length ? waivedFindings.map((f) => formatFinding(f, checklist)).join('\n') : '_No waived findings._'}
 
 ---
 

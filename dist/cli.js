@@ -12,7 +12,7 @@ function printHelp() {
 a11y-auditor — WCAG accessibility auditor for teams
 
 Usage:
-  a11y-auditor audit [--config <path>] [--cwd <dir>]
+  a11y-auditor audit [--config <path>] [--cwd <dir>] [--baseline <path>]
   a11y-auditor review [--report <path>] [--cwd <dir>]
   a11y-auditor init [--cwd <dir>]
   a11y-auditor --help
@@ -23,15 +23,20 @@ Commands:
   init    Scaffold config, npm script hint, GitHub Action, and Cursor skill
 
 Options:
-  --config  Path to config file (default: auto-discover in cwd)
-  --cwd     Working directory (default: process.cwd())
+  --config    Path to config file (default: auto-discover in cwd)
+  --cwd       Working directory (default: process.cwd())
+  --baseline  Path to previous report.json for regression comparison
 `);
 }
 async function runAudit(args) {
     const cwd = getArg(args, '--cwd') ?? process.cwd();
     const configPath = getArg(args, '--config');
+    const baselinePath = getArg(args, '--baseline');
     console.log(`Loading config from ${cwd}...`);
     const config = await (0, config_1.loadConfig)(cwd, configPath);
+    if (baselinePath) {
+        config.baseline = { file: baselinePath };
+    }
     console.log(`Auditing ${config.baseUrl} (WCAG ${config.wcag.version} ${config.wcag.level})...`);
     const report = await (0, audit_1.audit)(config);
     const written = await (0, report_1.writeReports)(report, config, cwd);

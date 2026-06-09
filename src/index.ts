@@ -17,6 +17,10 @@ export { getPlaybookEntry, getPlaybookExport } from './wcag/playbook';
 export { generateAgentReviewBrief } from './agent/review-brief';
 export { loadWaivers, applyWaivers, getActiveWaivers, getExpiredWaivers } from './waivers';
 export { writeSarifReport, buildSarifReport } from './report/sarif';
+export { groupFindings } from './report/grouping';
+export { compareWithBaseline, loadBaselineReport } from './report/baseline';
+export { runStaticAnalysis } from './scanner/static';
+export { runScenarioKeyboardChecks } from './scanner/keyboard';
 export { buildW3cLinks, getReportW3cReferences } from './wcag/urls';
 export type {
   AuditorConfig,
@@ -36,4 +40,6 @@ export type {
   ChecklistSummary,
   CriterionGuidance,
   WaiverEntry,
+  FindingGroup,
+  BaselineDiff,
 } from './types';

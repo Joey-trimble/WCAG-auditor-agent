@@ -4,6 +4,24 @@ All notable changes to `a11y-auditor-agent` are documented here.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning follows [SemVer](https://semver.org/).
 
+## [1.7.0] - 2026-06-09
+
+### Added
+
+- **Grouped violations** — `findingGroups` dedupes same rule+criterion across routes
+- **Baseline regression diff** — `--baseline` flag and `baseline.file` config
+- **Phase 5 static analysis** — optional ESLint jsx-a11y with file paths (`static.enabled: true`)
+- **Waived findings section** in agent-review.md
+- **HTML report** — principle table, WCAG 2.2-only, grouped violations, baseline, static audit
+- **Behavioral:** reduced-motion check (2.3.3), form error checks (3.3.1), scenario Escape/dialog keyboard checks
+- Expanded playbook guidance for 15+ additional criteria
+- [docs/static-analysis.md](./docs/static-analysis.md)
+
+### Changed
+
+- Manual review queue in agent brief no longer capped at 15 items
+- Config example includes `reduced-motion` variant and static/baseline options
+
 ## [1.6.0] - 2026-06-09
 
 ### Added
@@ -69,6 +87,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning foll
 - Cursor `wcag-auditor` skill template
 - GitHub Action template
 
+[1.7.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.4.0...v1.6.0
 [1.4.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.2.0...v1.3.0

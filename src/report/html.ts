@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
-import type { AuditFinding, AuditReport, ChecklistItem } from '../types';
+import type { AuditFinding, AuditReport, ChecklistItem, FindingGroup } from '../types';
+import { formatCriterionHierarchy, summarizeChecklistByPrinciple, WCAG_22_ONLY_CRITERIA_IDS } from '../wcag/hierarchy';
 
 function escapeHtml(text: string): string {
   return text
@@ -43,10 +44,16 @@ function renderW3cLinks(f: AuditFinding): string {
     <a href="${escapeHtml(f.helpUrl)}" target="_blank" rel="noopener">Axe rule</a>`;
 }
 
-function renderFinding(f: AuditFinding): string {
+function renderFinding(f: AuditFinding, checklist: ChecklistItem[]): string {
+  const criterionId = f.wcag.criteria.find((id) => id !== 'unknown');
+  const checklistItem = criterionId ? checklist.find((c) => c.id === criterionId) : undefined;
+  const hierarchy = checklistItem ? formatCriterionHierarchy(checklistItem) : undefined;
   const criterionLabel = f.criterionTitle
     ? `${f.wcag.criteria.join(', ')} — ${escapeHtml(f.criterionTitle)}`
     : escapeHtml(f.wcag.criteria.join(', '));
+  const location = f.filePath
+    ? `<dt><strong>File</strong></dt><dd><code>${escapeHtml(f.filePath)}${f.line ? `:${f.line}` : ''}</code></dd>`
+    : '';
 
   return `
     <article class="finding" style="border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:12px">
@@ -58,8 +65,10 @@ function renderFinding(f: AuditFinding): string {
       </header>
       <p style="color:#555;margin:0 0 8px">${escapeHtml(f.description)}</p>
       <dl style="margin:0;font-size:14px">
+        ${hierarchy ? `<dt><strong>Hierarchy</strong></dt><dd>${escapeHtml(hierarchy)}</dd>` : ''}
         <dt><strong>WCAG</strong></dt><dd>${criterionLabel}</dd>
         <dt><strong>Rule</strong></dt><dd><code>${escapeHtml(f.rule)}</code> <span style="color:#6a7075">(${escapeHtml(f.source)})</span></dd>
+        ${location}
         <dt><strong>Route</strong></dt><dd>${escapeHtml(f.route)} (${escapeHtml(f.variant)})</dd>
         <dt><strong>Selector</strong></dt><dd><code>${escapeHtml(f.selector)}</code></dd>
         <dt><strong>W3C references</strong></dt><dd>${renderW3cLinks(f)}</dd>
@@ -93,6 +102,27 @@ function renderChecklistItem(item: ChecklistItem): string {
     </tr>`;
 }
 
+function renderFindingGroup(group: FindingGroup, checklist: ChecklistItem[]): string {
+  const checklistItem = checklist.find((c) => c.id === group.criterionId);
+  const hierarchy = checklistItem ? formatCriterionHierarchy(checklistItem) : group.criterionTitle ?? group.criterionId;
+
+  return `
+    <article class="finding" style="border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:12px">
+      <header style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        ${impactBadge(group.impact)}
+        <strong>${escapeHtml(group.summary)}</strong>
+        <span style="color:#1565c0;font-size:13px">${group.instanceCount} instance${group.instanceCount === 1 ? '' : 's'}</span>
+      </header>
+      <p style="color:#555;margin:0 0 8px"><strong>Hierarchy:</strong> ${escapeHtml(hierarchy)}</p>
+      <dl style="margin:0;font-size:14px">
+        <dt><strong>Rule</strong></dt><dd><code>${escapeHtml(group.rule)}</code></dd>
+        <dt><strong>Routes</strong></dt><dd>${group.routes.map((r) => `<code>${escapeHtml(r)}</code>`).join(', ')}</dd>
+        <dt><strong>Selectors</strong></dt><dd>${group.selectors.slice(0, 5).map((s) => `<code>${escapeHtml(s)}</code>`).join(', ')}${group.selectors.length > 5 ? ` +${group.selectors.length - 5} more` : ''}</dd>
+        ${group.filePaths.length ? `<dt><strong>Files</strong></dt><dd>${group.filePaths.slice(0, 5).map((f) => `<code>${escapeHtml(f)}</code>`).join(', ')}</dd>` : ''}
+      </dl>
+    </article>`;
+}
+
 export function writeHtmlReport(report: AuditReport, outputPath: string): void {
   const violations = report.findings.filter((f) => !f.needsManualReview);
   const manual = report.findings.filter((f) => f.needsManualReview);
@@ -103,6 +133,10 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
   const w3c = report.w3cReferences;
 
   const manualReviewItems = checklist.filter((c) => c.status === 'needs-manual-review');
+  const waivedFindings = report.findings.filter((f) => f.waived);
+  const principleSummary = summarizeChecklistByPrinciple(checklist);
+  const wcag22Items = checklist.filter((c) => WCAG_22_ONLY_CRITERIA_IDS.includes(c.id));
+  const findingGroups = report.findingGroups ?? [];
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -153,6 +187,53 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
     </div>
 
     ${
+      report.baselineDiff
+        ? `<section>
+      <h2>Baseline comparison</h2>
+      <p class="note">Compared to baseline from ${escapeHtml(report.baselineDiff.baselineTimestamp)}.</p>
+      <div class="summary">
+        <div class="card"><span>New issues</span><strong style="color:#c62828">${report.baselineDiff.newCount}</strong></div>
+        <div class="card"><span>Fixed issues</span><strong style="color:#2e7d32">${report.baselineDiff.fixedCount}</strong></div>
+        <div class="card"><span>Violation delta</span><strong>${report.baselineDiff.violationDelta >= 0 ? '+' : ''}${report.baselineDiff.violationDelta}</strong></div>
+      </div>
+    </section>`
+        : ''
+    }
+
+    ${
+      principleSummary.length
+        ? `<section>
+      <h2>Coverage by principle</h2>
+      <table>
+        <thead><tr><th>Principle</th><th>Criteria</th><th>Failed</th><th>Manual review</th><th>Automated pass</th></tr></thead>
+        <tbody>
+          ${principleSummary.map((p) => `<tr><td>${escapeHtml(p.principle)}</td><td>${p.summary.total}</td><td>${p.summary.failed}</td><td>${p.summary.needsManualReview}</td><td>${p.summary.automatedPass}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </section>`
+        : ''
+    }
+
+    ${
+      wcag22Items.length
+        ? `<section>
+      <h2>WCAG 2.2-only criteria</h2>
+      <ul>${wcag22Items.map((item) => `<li><strong>${escapeHtml(item.id)}</strong> ${escapeHtml(item.title)} — ${statusBadge(item.status)}</li>`).join('')}</ul>
+    </section>`
+        : ''
+    }
+
+    ${
+      report.staticAudit
+        ? `<section>
+      <h2>Static analysis (Phase 5)</h2>
+      <p><strong>${report.staticAudit.filesScanned}</strong> files scanned via ESLint jsx-a11y.</p>
+      ${report.staticAudit.warnings.length ? `<ul>${report.staticAudit.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul>` : ''}
+    </section>`
+        : ''
+    }
+
+    ${
       checklistSummary
         ? `<section>
       <h2>WCAG ${escapeHtml(report.meta.wcag.version)} ${escapeHtml(report.meta.wcag.level)} coverage summary</h2>
@@ -198,8 +279,28 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
 
     <section>
       <h2>Agent review brief</h2>
-      <p class="note">Open <code>a11y-reports/agent-review.md</code> in Cursor for an AI-ready remediation brief with W3C guidance per criterion. Regenerate with <code>npx a11y-auditor review</code>.</p>
+      <p class="note">Open <code>a11y-reports/agent-review.md</code> and <code>a11y-reports/wcag-context.json</code> in Cursor for AI-guided fixes. Regenerate with <code>npx a11y-auditor review</code>.</p>
     </section>
+
+    ${
+      findingGroups.length
+        ? `<section>
+      <h2>Grouped violations (${findingGroups.length} patterns)</h2>
+      <p class="note">Same rule + criterion grouped across routes. Fix the pattern once to resolve multiple instances.</p>
+      ${findingGroups.slice(0, 30).map((g) => renderFindingGroup(g, checklist)).join('')}
+    </section>`
+        : ''
+    }
+
+    ${
+      waivedFindings.length
+        ? `<section>
+      <h2>Waived findings (${waivedFindings.length})</h2>
+      <p class="note">These are excluded from CI thresholds. Do not fix unless the waiver expires.</p>
+      ${waivedFindings.map((f) => renderFinding(f, checklist)).join('')}
+    </section>`
+        : ''
+    }
 
     ${
       report.behavioralAudit
@@ -213,12 +314,12 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
 
     <section>
       <h2>Violations (${violations.length})</h2>
-      ${violations.length ? violations.map(renderFinding).join('') : '<p>No automated violations detected.</p>'}
+      ${violations.length ? violations.map((f) => renderFinding(f, checklist)).join('') : '<p>No automated violations detected.</p>'}
     </section>
 
     <section>
       <h2>Axe incomplete / manual review queue (${manual.length})</h2>
-      ${manual.length ? manual.map(renderFinding).join('') : '<p>No axe items requiring manual review.</p>'}
+      ${manual.length ? manual.map((f) => renderFinding(f, checklist)).join('') : '<p>No axe items requiring manual review.</p>'}
     </section>
 
     ${

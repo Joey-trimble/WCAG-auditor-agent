@@ -9,14 +9,17 @@ import {
   runCrossPageChecks,
   type NavSignature,
 } from './scanner/behavioral';
-import { runKeyboardAudit } from './scanner/keyboard';
+import { runKeyboardAudit, runScenarioKeyboardChecks } from './scanner/keyboard';
 import { applyVariant } from './scanner/variants';
 import { buildWcagChecklist, summarizeChecklist } from './wcag/checklist';
 import { applyWaivers, getActiveWaivers, getExpiredWaivers, loadWaivers } from './waivers';
 import { enrichChecklist, enrichFindings } from './wcag/enrich';
+import { compareWithBaseline, loadBaselineReport } from './report/baseline';
+import { groupFindings } from './report/grouping';
+import { runStaticAnalysis } from './scanner/static';
 import { getReportW3cReferences } from './wcag/urls';
 
-const PACKAGE_VERSION = '1.6.0';
+const PACKAGE_VERSION = '1.7.0';
 
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/$/, '');
@@ -144,7 +147,7 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
             }
           }
 
-          if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200')) {
+          if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200' || variant === 'reduced-motion')) {
             const behavioral = await runBehavioralChecks(page, config, ctx);
             pageFindings.push(...behavioral.findings);
             mergeBehavioralResult(behavioral, allFindings, passedCriteria, behavioralPassedChecks);
@@ -178,7 +181,13 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
                 passedCriteria.add(criterion);
               }
 
-              if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200')) {
+              if (variant === 'default') {
+                const scenarioKeyboard = await runScenarioKeyboardChecks(scenarioPage, config, scenarioCtx);
+                scenarioFindings.push(...scenarioKeyboard.findings);
+                allFindings.push(...scenarioKeyboard.findings);
+              }
+
+              if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200' || variant === 'reduced-motion')) {
                 const scenarioBehavioral = await runBehavioralChecks(scenarioPage, config, scenarioCtx);
                 scenarioFindings.push(...scenarioBehavioral.findings);
                 mergeBehavioralResult(scenarioBehavioral, allFindings, passedCriteria, behavioralPassedChecks);
@@ -213,6 +222,9 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
   }
 
   const cwd = process.cwd();
+  const staticResult = runStaticAnalysis(cwd, config);
+  allFindings.push(...staticResult.findings);
+
   const waiverEntries = loadWaivers(cwd, config);
   const enrichedFindings = applyWaivers(enrichFindings(allFindings, config.wcag.version), waiverEntries);
 
@@ -257,6 +269,11 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
         }
       : undefined,
     findings: enrichedFindings,
+    findingGroups: groupFindings(enrichedFindings.filter((f) => !f.needsManualReview)),
+    staticAudit:
+      config.static?.enabled === true
+        ? { filesScanned: staticResult.filesScanned, warnings: staticResult.warnings }
+        : undefined,
     routes: routeResults,
     keyboardAudit: {
       focusOrder: keyboardFocusOrder,
@@ -274,6 +291,7 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
   };
 
   report.summary.passed = evaluateThresholds(report, config);
+  report.baselineDiff = compareWithBaseline(report, loadBaselineReport(cwd, config.baseline?.file));
   return report;
 }
 

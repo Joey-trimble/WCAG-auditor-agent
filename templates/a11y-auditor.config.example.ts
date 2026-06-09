@@ -34,7 +34,16 @@ const config: AuditorConfig = {
 
   // behavioral: { enabled: true },
 
-  variants: ['default', 'dark'],
+  // Phase 5 — static analysis (requires eslint + eslint-plugin-jsx-a11y in your project)
+  // static: {
+  //   enabled: true,
+  //   globs: ['src/**/*.{tsx,jsx}'],
+  // },
+
+  // Compare against a saved baseline report for regressions
+  // baseline: { file: './a11y-reports/baseline.json' },
+
+  variants: ['default', 'dark', 'reduced-motion'],
 
   thresholds: {
     failOn: ['critical', 'serious'],

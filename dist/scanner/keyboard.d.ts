@@ -11,4 +11,10 @@ export declare function runKeyboardAudit(page: Page, config: AuditorConfig, ctx:
     variant: PageVariant;
     scenario?: string;
 }): Promise<KeyboardAuditResult>;
+export declare function runScenarioKeyboardChecks(page: Page, config: AuditorConfig, ctx: {
+    route: string;
+    routeName?: string;
+    variant: PageVariant;
+    scenario?: string;
+}): Promise<KeyboardAuditResult>;
 //# sourceMappingURL=keyboard.d.ts.map

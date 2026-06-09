@@ -44,12 +44,15 @@ If `agent-review.md` is missing, read `./a11y-reports/report.json` and apply the
 
 ## Triage order
 
-1. `critical` and `serious` violations (check hierarchy in brief)
-2. Failed criteria from `wcagChecklist` / `wcag-context.json`
-3. WCAG 2.2-only criteria with `failed` or `needs-manual-review`
-4. `incomplete` axe items
-5. Behavioral findings with `needsManualReview`
-6. `needs-manual-review` checklist items — verification steps, not blind fixes
+1. **Static (jsx-a11y) findings** — include file paths; fix in source first
+2. **Grouped violation patterns** — fix once to resolve multiple instances
+3. `critical` and `serious` violations (check hierarchy in brief)
+4. Failed criteria from `wcagChecklist` / `wcag-context.json`
+5. WCAG 2.2-only criteria with `failed` or `needs-manual-review`
+6. `incomplete` axe items
+7. Behavioral findings with `needsManualReview`
+8. `needs-manual-review` checklist items — verification steps, not blind fixes
+9. **Waived findings** — do not fix (see brief Waived section)
 
 ## Per-fix output format
 

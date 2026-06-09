@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getReportW3cReferences = exports.buildW3cLinks = exports.buildSarifReport = exports.writeSarifReport = exports.getExpiredWaivers = exports.getActiveWaivers = exports.applyWaivers = exports.loadWaivers = exports.generateAgentReviewBrief = exports.getPlaybookExport = exports.getPlaybookEntry = exports.enrichChecklist = exports.enrichFinding = exports.enrichFindings = exports.buildWcagContext = exports.summarizeChecklistByPrinciple = exports.isWcag22OnlyCriterion = exports.formatCriterionHierarchy = exports.WCAG_22_ONLY_CRITERIA_IDS = exports.WCAG_PRINCIPLES = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.extractNavSignature = exports.runCrossPageChecks = exports.runBehavioralChecks = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
+exports.getReportW3cReferences = exports.buildW3cLinks = exports.runScenarioKeyboardChecks = exports.runStaticAnalysis = exports.loadBaselineReport = exports.compareWithBaseline = exports.groupFindings = exports.buildSarifReport = exports.writeSarifReport = exports.getExpiredWaivers = exports.getActiveWaivers = exports.applyWaivers = exports.loadWaivers = exports.generateAgentReviewBrief = exports.getPlaybookExport = exports.getPlaybookEntry = exports.enrichChecklist = exports.enrichFinding = exports.enrichFindings = exports.buildWcagContext = exports.summarizeChecklistByPrinciple = exports.isWcag22OnlyCriterion = exports.formatCriterionHierarchy = exports.WCAG_22_ONLY_CRITERIA_IDS = exports.WCAG_PRINCIPLES = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.extractNavSignature = exports.runCrossPageChecks = exports.runBehavioralChecks = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
 var audit_1 = require("./audit");
 Object.defineProperty(exports, "audit", { enumerable: true, get: function () { return audit_1.audit; } });
 Object.defineProperty(exports, "auditUrl", { enumerable: true, get: function () { return audit_1.auditUrl; } });
@@ -50,6 +50,15 @@ Object.defineProperty(exports, "getExpiredWaivers", { enumerable: true, get: fun
 var sarif_1 = require("./report/sarif");
 Object.defineProperty(exports, "writeSarifReport", { enumerable: true, get: function () { return sarif_1.writeSarifReport; } });
 Object.defineProperty(exports, "buildSarifReport", { enumerable: true, get: function () { return sarif_1.buildSarifReport; } });
+var grouping_1 = require("./report/grouping");
+Object.defineProperty(exports, "groupFindings", { enumerable: true, get: function () { return grouping_1.groupFindings; } });
+var baseline_1 = require("./report/baseline");
+Object.defineProperty(exports, "compareWithBaseline", { enumerable: true, get: function () { return baseline_1.compareWithBaseline; } });
+Object.defineProperty(exports, "loadBaselineReport", { enumerable: true, get: function () { return baseline_1.loadBaselineReport; } });
+var static_1 = require("./scanner/static");
+Object.defineProperty(exports, "runStaticAnalysis", { enumerable: true, get: function () { return static_1.runStaticAnalysis; } });
+var keyboard_1 = require("./scanner/keyboard");
+Object.defineProperty(exports, "runScenarioKeyboardChecks", { enumerable: true, get: function () { return keyboard_1.runScenarioKeyboardChecks; } });
 var urls_1 = require("./wcag/urls");
 Object.defineProperty(exports, "buildW3cLinks", { enumerable: true, get: function () { return urls_1.buildW3cLinks; } });
 Object.defineProperty(exports, "getReportW3cReferences", { enumerable: true, get: function () { return urls_1.getReportW3cReferences; } });

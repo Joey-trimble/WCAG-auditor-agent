@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runKeyboardAudit = runKeyboardAudit;
+exports.runScenarioKeyboardChecks = runScenarioKeyboardChecks;
 const finding_factory_1 = require("./finding-factory");
 const MAX_TAB_STOPS = 50;
 async function runKeyboardAudit(page, config, ctx) {
@@ -73,5 +74,60 @@ async function runKeyboardAudit(page, config, ctx) {
         }
     }
     return { focusOrder, issues, findings };
+}
+async function runScenarioKeyboardChecks(page, config, ctx) {
+    const findings = [];
+    const issues = [];
+    const hasDialog = await page.evaluate(() => {
+        return Boolean(document.querySelector('[role="dialog"], [aria-modal="true"], dialog[open]'));
+    });
+    if (!hasDialog) {
+        return { focusOrder: [], issues, findings };
+    }
+    const focusBefore = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el || el === document.body) {
+            return null;
+        }
+        return el.id ? `#${el.id}` : el.tagName.toLowerCase();
+    });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    const focusAfter = await page.evaluate(() => {
+        const dialogOpen = Boolean(document.querySelector('[role="dialog"][aria-hidden="false"], [aria-modal="true"], dialog[open]'));
+        const el = document.activeElement;
+        const selector = el && el !== document.body
+            ? el.id
+                ? `#${el.id}`
+                : el.tagName.toLowerCase()
+            : null;
+        return { dialogOpen, selector };
+    });
+    if (focusAfter.dialogOpen) {
+        issues.push('Escape did not dismiss open dialog (WCAG 2.1.2)');
+        findings.push((0, finding_factory_1.createFinding)(config, { ...ctx, source: 'keyboard' }, {
+            rule: 'keyboard-escape-dialog',
+            summary: 'Escape key does not close dialog',
+            description: `Scenario "${ctx.scenario ?? 'unknown'}": dialog remained open after Escape.`,
+            selector: '[role="dialog"], [aria-modal="true"]',
+            impact: 'serious',
+            criteria: ['2.1.2'],
+            remediation: 'Close modal on Escape and restore focus to the trigger element.',
+        }));
+    }
+    else if (focusBefore && focusAfter.selector === focusBefore) {
+        issues.push('Focus may not have returned after dialog close (WCAG 2.4.3)');
+        findings.push((0, finding_factory_1.createFinding)(config, { ...ctx, source: 'keyboard' }, {
+            rule: 'keyboard-focus-restore',
+            summary: 'Focus may not restore after dialog closes',
+            description: `Scenario "${ctx.scenario ?? 'unknown'}": focus stayed on ${focusBefore} after Escape.`,
+            selector: focusBefore,
+            impact: 'moderate',
+            criteria: ['2.4.3'],
+            remediation: 'Restore focus to the element that opened the dialog when it closes.',
+            needsManualReview: true,
+        }));
+    }
+    return { focusOrder: [], issues, findings };
 }
 //# sourceMappingURL=keyboard.js.map

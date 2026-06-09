@@ -12,8 +12,11 @@ const variants_1 = require("./scanner/variants");
 const checklist_1 = require("./wcag/checklist");
 const waivers_1 = require("./waivers");
 const enrich_1 = require("./wcag/enrich");
+const baseline_1 = require("./report/baseline");
+const grouping_1 = require("./report/grouping");
+const static_1 = require("./scanner/static");
 const urls_1 = require("./wcag/urls");
-const PACKAGE_VERSION = '1.6.0';
+const PACKAGE_VERSION = '1.7.0';
 function buildUrl(baseUrl, path) {
     const base = baseUrl.replace(/\/$/, '');
     const route = path.startsWith('/') ? path : `/${path}`;
@@ -109,7 +112,7 @@ async function audit(config) {
                             navSignatures.push(await (0, behavioral_1.extractNavSignature)(page, route.path));
                         }
                     }
-                    if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200')) {
+                    if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200' || variant === 'reduced-motion')) {
                         const behavioral = await (0, behavioral_1.runBehavioralChecks)(page, config, ctx);
                         pageFindings.push(...behavioral.findings);
                         mergeBehavioralResult(behavioral, allFindings, passedCriteria, behavioralPassedChecks);
@@ -138,7 +141,12 @@ async function audit(config) {
                             for (const criterion of scenarioAxe.passedCriteria) {
                                 passedCriteria.add(criterion);
                             }
-                            if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200')) {
+                            if (variant === 'default') {
+                                const scenarioKeyboard = await (0, keyboard_1.runScenarioKeyboardChecks)(scenarioPage, config, scenarioCtx);
+                                scenarioFindings.push(...scenarioKeyboard.findings);
+                                allFindings.push(...scenarioKeyboard.findings);
+                            }
+                            if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200' || variant === 'reduced-motion')) {
                                 const scenarioBehavioral = await (0, behavioral_1.runBehavioralChecks)(scenarioPage, config, scenarioCtx);
                                 scenarioFindings.push(...scenarioBehavioral.findings);
                                 mergeBehavioralResult(scenarioBehavioral, allFindings, passedCriteria, behavioralPassedChecks);
@@ -173,6 +181,8 @@ async function audit(config) {
         await browser.close();
     }
     const cwd = process.cwd();
+    const staticResult = (0, static_1.runStaticAnalysis)(cwd, config);
+    allFindings.push(...staticResult.findings);
     const waiverEntries = (0, waivers_1.loadWaivers)(cwd, config);
     const enrichedFindings = (0, waivers_1.applyWaivers)((0, enrich_1.enrichFindings)(allFindings, config.wcag.version), waiverEntries);
     const violations = enrichedFindings.filter((f) => !f.needsManualReview && !f.waived);
@@ -212,6 +222,10 @@ async function audit(config) {
             }
             : undefined,
         findings: enrichedFindings,
+        findingGroups: (0, grouping_1.groupFindings)(enrichedFindings.filter((f) => !f.needsManualReview)),
+        staticAudit: config.static?.enabled === true
+            ? { filesScanned: staticResult.filesScanned, warnings: staticResult.warnings }
+            : undefined,
         routes: routeResults,
         keyboardAudit: {
             focusOrder: keyboardFocusOrder,
@@ -228,6 +242,7 @@ async function audit(config) {
         w3cReferences: (0, urls_1.getReportW3cReferences)(config.wcag.version),
     };
     report.summary.passed = (0, config_1.evaluateThresholds)(report, config);
+    report.baselineDiff = (0, baseline_1.compareWithBaseline)(report, (0, baseline_1.loadBaselineReport)(cwd, config.baseline?.file));
     return report;
 }
 async function auditUrl(url, options = {}) {
