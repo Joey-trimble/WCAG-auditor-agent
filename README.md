@@ -5,8 +5,7 @@ Reusable **WCAG 2.2** accessibility auditor for teams. Combines **axe-core** aut
 ## Install in your project
 
 ```bash
-# Replace YOUR_ORG with your GitHub org or username
-npm install -D github:YOUR_ORG/a11y-auditor-agent
+npm install -D github:Joey-trimble/WCAG-auditor-agent
 npx playwright install chromium
 npx a11y-auditor init
 ```

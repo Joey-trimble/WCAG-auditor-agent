@@ -4,10 +4,10 @@ Add WCAG 2.2 AA auditing to any web app in a few minutes.
 
 ## 1. Install
 
-**From GitHub** (replace `YOUR_ORG`):
+**From GitHub**:
 
 ```bash
-npm install -D github:YOUR_ORG/a11y-auditor-agent
+npm install -D github:Joey-trimble/WCAG-auditor-agent
 npx playwright install chromium
 ```
 

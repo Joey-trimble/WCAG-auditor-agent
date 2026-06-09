@@ -5,14 +5,14 @@
 ### Option A — GitHub website
 
 1. Go to [github.com/new](https://github.com/new)
-2. Repository name: `a11y-auditor-agent`
+2. Repository name: `WCAG-auditor-agent`
 3. Visibility: **Internal** or **Private** (recommended for org tools) or **Public**
 4. Do **not** add a README, .gitignore, or license (this repo already has them)
 5. Click **Create repository**
 6. In your terminal, from this folder:
 
 ```bash
-git remote add origin https://github.com/YOUR_ORG/a11y-auditor-agent.git
+git remote add origin https://github.com/Joey-trimble/WCAG-auditor-agent.git
 git branch -M main
 git push -u origin main
 ```
@@ -24,7 +24,7 @@ git push -u origin main
 ```bash
 brew install gh
 gh auth login
-gh repo create a11y-auditor-agent --private --source=. --remote=origin --push
+gh repo create WCAG-auditor-agent --private --source=. --remote=origin --push
 ```
 
 ---
@@ -34,7 +34,7 @@ gh repo create a11y-auditor-agent --private --source=. --remote=origin --push
 ### From GitHub (no npm publish required)
 
 ```bash
-npm install -D github:YOUR_ORG/a11y-auditor-agent
+npm install -D github:Joey-trimble/WCAG-auditor-agent
 npx playwright install chromium
 npx a11y-auditor init
 ```
@@ -42,13 +42,13 @@ npx a11y-auditor init
 Or with HTTPS:
 
 ```bash
-npm install -D "git+https://github.com/YOUR_ORG/a11y-auditor-agent.git"
+npm install -D "git+https://github.com/Joey-trimble/WCAG-auditor-agent.git"
 ```
 
 Pin a version tag for stability:
 
 ```bash
-npm install -D "github:YOUR_ORG/a11y-auditor-agent#v1.0.0"
+npm install -D "github:Joey-trimble/WCAG-auditor-agent#v1.0.0"
 ```
 
 ### From npm (after publishing)
