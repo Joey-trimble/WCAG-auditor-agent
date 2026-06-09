@@ -47,7 +47,7 @@ Summary:
   Serious:        ${report.summary.byImpact.serious}
   Status:         ${report.summary.passed ? 'PASSED' : 'FAILED'}
 
-Open a11y-reports/agent-review.md in Cursor for AI-guided fixes.
+Open a11y-reports/agent-review.md and wcag-context.json in Cursor for AI-guided fixes.
 `);
     return report.summary.passed ? 0 : 1;
 }
@@ -60,9 +60,13 @@ async function runReview(args) {
         return 2;
     }
     const report = JSON.parse((0, fs_1.readFileSync)(reportPath, 'utf-8'));
-    const outputPath = (0, path_1.join)((0, path_1.dirname)(reportPath), 'agent-review.md');
-    (0, report_1.writeAgentReviewBrief)(report, outputPath);
-    console.log(`Agent review brief written: ${outputPath}`);
+    const outputDir = (0, path_1.dirname)(reportPath);
+    const reviewPath = (0, path_1.join)(outputDir, 'agent-review.md');
+    const contextPath = (0, path_1.join)(outputDir, 'wcag-context.json');
+    (0, report_1.writeAgentReviewBrief)(report, reviewPath);
+    (0, report_1.writeWcagContext)(report, contextPath);
+    console.log(`Agent review brief written: ${reviewPath}`);
+    console.log(`WCAG context written: ${contextPath}`);
     console.log('\nOpen in Cursor and ask: "Review agent-review.md and suggest fixes"');
     return 0;
 }
@@ -99,7 +103,7 @@ async function runInit(args) {
     (0, fs_1.mkdirSync)(skillDestDir, { recursive: true });
     const skillDest = (0, path_1.join)(skillDestDir, 'SKILL.md');
     const skillTemplateDir = (0, path_1.join)(templatesDir, 'cursor-skill', 'wcag-auditor');
-    for (const file of ['SKILL.md', 'reference.md']) {
+    for (const file of ['SKILL.md', 'reference.md', 'wcag-hierarchy.md', 'wcag-22-new-criteria.md']) {
         const dest = (0, path_1.join)(skillDestDir, file);
         if (!(0, fs_1.existsSync)(dest)) {
             (0, fs_1.copyFileSync)((0, path_1.join)(skillTemplateDir, file), dest);

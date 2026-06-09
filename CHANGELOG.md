@@ -4,6 +4,17 @@ All notable changes to `a11y-auditor-agent` are documented here.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning follows [SemVer](https://semver.org/).
 
+## [1.6.0] - 2026-06-09
+
+### Added
+
+- **Phase 6 — Full W3C context for agents**
+- `wcag-context.json` — machine-readable principle → guideline → criterion tree
+- Agent brief: coverage-by-principle table, WCAG 2.2-only criteria section
+- Per-finding hierarchy: Principle → Guideline → SC → Techniques
+- Upgraded Cursor skill: `wcag-hierarchy.md`, `wcag-22-new-criteria.md`
+- `review` command regenerates `wcag-context.json`
+
 ## [1.4.0] - 2026-06-09
 
 ### Added
@@ -58,6 +69,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning foll
 - Cursor `wcag-auditor` skill template
 - GitHub Action template
 
+[1.6.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.4.0...v1.6.0
 [1.4.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Joey-trimble/WCAG-auditor-agent/compare/v1.1.0...v1.2.0

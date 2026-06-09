@@ -1,6 +1,8 @@
-# Agent review (Phase 3)
+# Agent review (Phase 3 + Phase 6)
 
 Phase 3 adds an **AI-ready remediation brief** with W3C-aligned guidance per success criterion.
+
+Phase 6 adds **full W3C hierarchy** (principle → guideline → criterion → technique) and machine-readable context for agents.
 
 ## Auto-generated on every audit
 
@@ -10,7 +12,8 @@ After `npx a11y-auditor audit`, you get:
 a11y-reports/
   report.json
   report.html
-  agent-review.md   ← new
+  agent-review.md      ← human-readable brief
+  wcag-context.json    ← machine-readable hierarchy (Phase 6)
 ```
 
 ## Regenerate without re-scanning
@@ -23,18 +26,29 @@ npx a11y-auditor review --report ./a11y-reports/report.json
 
 ## Use with Cursor
 
-1. Open `a11y-reports/agent-review.md`
-2. Ask: **"Review agent-review.md and suggest fixes in this codebase"**
-3. The `wcag-auditor` skill (from `npx a11y-auditor init`) guides the agent
+1. Open `a11y-reports/agent-review.md` and `a11y-reports/wcag-context.json`
+2. Ask: **"Review agent-review.md and wcag-context.json; fix accessibility issues in this codebase"**
+3. The `wcag-auditor` skill (from `npx a11y-auditor init`) guides the agent with:
+   - `wcag-hierarchy.md` — principle → guideline → criterion traceability
+   - `wcag-22-new-criteria.md` — WCAG 2.2-only criteria checklist
 
 ## What's in agent-review.md
 
-- Executive summary and top violations
+- Executive summary and top violations with **full hierarchy** per finding
+- **Coverage by principle** table (Perceivable, Operable, Understandable, Robust)
+- **WCAG 2.2-only criteria** section with pass/fail status
 - **Priority fixes** grouped by failed WCAG criterion
 - **Manual review queue** with how-to-test and how-to-fix guidance
-- W3C Understanding links per criterion
-- W3C Techniques references (H37, G18, ARIA6, etc.)
+- W3C Understanding links and Techniques (H37, G18, ARIA6, etc.) per finding
 - Keyboard and behavioral check results
+
+## What's in wcag-context.json (Phase 6)
+
+Machine-readable export for AI agents:
+
+- `principles` — nested principle → guideline → criterion tree with status
+- `wcag22NewCriteria` — all WCAG 2.2-only criteria and their audit status
+- `topFindings` — priority violations with hierarchy and techniques
 
 ## Playbook data
 

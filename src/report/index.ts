@@ -4,6 +4,7 @@ import { writeJsonReport } from './json';
 import { writeHtmlReport } from './html';
 import { writeAgentReviewBrief } from './review';
 import { writeSarifReport } from './sarif';
+import { writeWcagContext } from './context';
 
 export async function writeReports(report: AuditReport, config: AuditorConfig, cwd: string): Promise<string[]> {
   const outputDir = resolve(cwd, config.output?.dir ?? './a11y-reports');
@@ -32,6 +33,10 @@ export async function writeReports(report: AuditReport, config: AuditorConfig, c
   writeAgentReviewBrief(report, reviewPath);
   written.push(reviewPath);
 
+  const contextPath = resolve(outputDir, 'wcag-context.json');
+  writeWcagContext(report, contextPath);
+  written.push(contextPath);
+
   return written;
 }
 
@@ -40,3 +45,5 @@ export { writeHtmlReport } from './html';
 export { writeAgentReviewBrief } from './review';
 export { generateAgentReviewBrief } from '../agent/review-brief';
 export { writeSarifReport, buildSarifReport } from './sarif';
+export { writeWcagContext } from './context';
+export { buildWcagContext } from '../wcag/context';

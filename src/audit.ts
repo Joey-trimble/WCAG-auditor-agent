@@ -16,7 +16,7 @@ import { applyWaivers, getActiveWaivers, getExpiredWaivers, loadWaivers } from '
 import { enrichChecklist, enrichFindings } from './wcag/enrich';
 import { getReportW3cReferences } from './wcag/urls';
 
-const PACKAGE_VERSION = '1.4.0';
+const PACKAGE_VERSION = '1.6.0';
 
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/$/, '');

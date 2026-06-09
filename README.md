@@ -52,6 +52,7 @@ Add to `package.json`:
 - **Behavioral checks (Phase 2)** — page title, lang, landmarks, skip links, reflow, target size, consistent nav
 - **Agent review brief (Phase 3)** — `agent-review.md` with W3C playbook per criterion for Cursor/AI fixes
 - **Enterprise (Phase 4)** — SARIF for GitHub Code Scanning, rule waivers with expiry, CHANGELOG
+- **Full W3C context (Phase 6)** — `wcag-context.json`, principle-grouped agent brief, WCAG 2.2-only criteria, upgraded Cursor skill
 - Multi-route scanning with auth profiles (`storageState`)
 - Page variants: default, dark mode, 200% zoom
 - Scenario steps (open menus, dialogs) before scan
@@ -65,7 +66,7 @@ Add to `package.json`:
 |-----|---------|
 | [docs/adoption.md](./docs/adoption.md) | Team onboarding |
 | [docs/behavioral-checks.md](./docs/behavioral-checks.md) | Phase 2 behavioral test reference |
-| [docs/agent-review.md](./docs/agent-review.md) | Phase 3 AI remediation brief |
+| [docs/agent-review.md](./docs/agent-review.md) | Phase 3/6 AI remediation brief + wcag-context.json |
 | [docs/enterprise.md](./docs/enterprise.md) | Phase 4 SARIF, waivers, publishing |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
 | [docs/sharing.md](./docs/sharing.md) | GitHub repo, releases, install options |

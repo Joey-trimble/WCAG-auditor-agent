@@ -3,7 +3,7 @@ import { existsSync, copyFileSync, mkdirSync, readFileSync, writeFileSync } from
 import { dirname, join, resolve } from 'path';
 import { audit } from './audit';
 import { loadConfig } from './config';
-import { writeReports, writeAgentReviewBrief } from './report';
+import { writeReports, writeAgentReviewBrief, writeWcagContext } from './report';
 import type { AuditReport } from './types';
 
 const PACKAGE_ROOT = resolve(__dirname, '..');
@@ -53,7 +53,7 @@ Summary:
   Serious:        ${report.summary.byImpact.serious}
   Status:         ${report.summary.passed ? 'PASSED' : 'FAILED'}
 
-Open a11y-reports/agent-review.md in Cursor for AI-guided fixes.
+Open a11y-reports/agent-review.md and wcag-context.json in Cursor for AI-guided fixes.
 `);
 
   return report.summary.passed ? 0 : 1;
@@ -70,10 +70,14 @@ async function runReview(args: string[]): Promise<number> {
   }
 
   const report = JSON.parse(readFileSync(reportPath, 'utf-8')) as AuditReport;
-  const outputPath = join(dirname(reportPath), 'agent-review.md');
-  writeAgentReviewBrief(report, outputPath);
+  const outputDir = dirname(reportPath);
+  const reviewPath = join(outputDir, 'agent-review.md');
+  const contextPath = join(outputDir, 'wcag-context.json');
+  writeAgentReviewBrief(report, reviewPath);
+  writeWcagContext(report, contextPath);
 
-  console.log(`Agent review brief written: ${outputPath}`);
+  console.log(`Agent review brief written: ${reviewPath}`);
+  console.log(`WCAG context written: ${contextPath}`);
   console.log('\nOpen in Cursor and ask: "Review agent-review.md and suggest fixes"');
   return 0;
 }
@@ -112,7 +116,7 @@ async function runInit(args: string[]): Promise<number> {
   mkdirSync(skillDestDir, { recursive: true });
   const skillDest = join(skillDestDir, 'SKILL.md');
   const skillTemplateDir = join(templatesDir, 'cursor-skill', 'wcag-auditor');
-  for (const file of ['SKILL.md', 'reference.md']) {
+  for (const file of ['SKILL.md', 'reference.md', 'wcag-hierarchy.md', 'wcag-22-new-criteria.md']) {
     const dest = join(skillDestDir, file);
     if (!existsSync(dest)) {
       copyFileSync(join(skillTemplateDir, file), dest);

@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildSarifReport = exports.writeSarifReport = exports.generateAgentReviewBrief = exports.writeAgentReviewBrief = exports.writeHtmlReport = exports.writeJsonReport = void 0;
+exports.buildWcagContext = exports.writeWcagContext = exports.buildSarifReport = exports.writeSarifReport = exports.generateAgentReviewBrief = exports.writeAgentReviewBrief = exports.writeHtmlReport = exports.writeJsonReport = void 0;
 exports.writeReports = writeReports;
 const path_1 = require("path");
 const json_1 = require("./json");
 const html_1 = require("./html");
 const review_1 = require("./review");
 const sarif_1 = require("./sarif");
+const context_1 = require("./context");
 async function writeReports(report, config, cwd) {
     const outputDir = (0, path_1.resolve)(cwd, config.output?.dir ?? './a11y-reports');
     const formats = config.output?.formats ?? ['json', 'html'];
@@ -29,6 +30,9 @@ async function writeReports(report, config, cwd) {
     const reviewPath = (0, path_1.resolve)(outputDir, 'agent-review.md');
     (0, review_1.writeAgentReviewBrief)(report, reviewPath);
     written.push(reviewPath);
+    const contextPath = (0, path_1.resolve)(outputDir, 'wcag-context.json');
+    (0, context_1.writeWcagContext)(report, contextPath);
+    written.push(contextPath);
     return written;
 }
 var json_2 = require("./json");
@@ -42,4 +46,8 @@ Object.defineProperty(exports, "generateAgentReviewBrief", { enumerable: true, g
 var sarif_2 = require("./sarif");
 Object.defineProperty(exports, "writeSarifReport", { enumerable: true, get: function () { return sarif_2.writeSarifReport; } });
 Object.defineProperty(exports, "buildSarifReport", { enumerable: true, get: function () { return sarif_2.buildSarifReport; } });
+var context_2 = require("./context");
+Object.defineProperty(exports, "writeWcagContext", { enumerable: true, get: function () { return context_2.writeWcagContext; } });
+var context_3 = require("../wcag/context");
+Object.defineProperty(exports, "buildWcagContext", { enumerable: true, get: function () { return context_3.buildWcagContext; } });
 //# sourceMappingURL=index.js.map

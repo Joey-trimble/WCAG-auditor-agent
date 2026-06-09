@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateAgentReviewBrief = generateAgentReviewBrief;
+const hierarchy_1 = require("../wcag/hierarchy");
 const playbook_1 = require("../wcag/playbook");
 const IMPACT_ORDER = ['critical', 'serious', 'moderate', 'minor'];
 function groupFindingsByCriterion(findings) {
@@ -13,9 +14,20 @@ function groupFindingsByCriterion(findings) {
     }
     return groups;
 }
-function formatFinding(f) {
+function formatFinding(f, checklist) {
+    const criterionId = f.wcag.criteria.find((id) => id !== 'unknown');
+    const checklistItem = criterionId ? checklist.find((c) => c.id === criterionId) : undefined;
+    const hierarchy = checklistItem
+        ? (0, hierarchy_1.formatCriterionHierarchy)(checklistItem)
+        : f.criterionTitle ?? criterionId ?? 'unknown';
+    const techniques = f.guidance?.techniques.length ? f.guidance.techniques.join(', ') : '';
     const w3c = f.w3c?.understanding ? `[Understanding](${f.w3c.understanding})` : '';
-    return `- **${f.impact}** ${f.summary} (\`${f.rule}\`, ${f.source}) on \`${f.route}\` ${f.variant}\n  - Selector: \`${f.selector}\`\n  - ${f.description}\n  ${w3c ? `  - ${w3c}` : ''}`;
+    return `- **${f.impact}** ${f.summary} (\`${f.rule}\`, ${f.source}) on \`${f.route}\` ${f.variant}
+  - **Hierarchy:** ${hierarchy}
+  - Selector: \`${f.selector}\`
+  - ${f.description}
+  ${techniques ? `  - **Techniques:** ${techniques}` : ''}
+  ${w3c ? `  - ${w3c}` : ''}`;
 }
 function formatGuidance(g) {
     const techniques = g.techniques.length ? `\n- **Techniques:** ${g.techniques.join(', ')}` : '';
@@ -24,11 +36,13 @@ function formatGuidance(g) {
 function renderCriterionSection(item, findings, guidance) {
     const w3cLinks = `[Understanding](${item.w3c.understanding}) · [Quick Ref](${item.w3c.quickRef})`;
     const findingBlock = findings.length
-        ? `\n**Findings:**\n${findings.map(formatFinding).join('\n')}`
+        ? `\n**Findings:**\n${findings.map((f) => formatFinding(f, [item])).join('\n')}`
         : '\n*No automated findings — verify manually using guidance below.*';
+    const wcag22Note = (0, hierarchy_1.isWcag22OnlyCriterion)(item.id) ? ' · **WCAG 2.2 only**' : '';
     return `### ${item.id} ${item.title} (${item.status})
 
-**Principle:** ${item.principle} · **Level:** ${item.level} · **W3C:** ${w3cLinks}
+**Hierarchy:** ${(0, hierarchy_1.formatCriterionHierarchy)(item)}${wcag22Note}
+**Level:** ${item.level} · **W3C:** ${w3cLinks}
 ${findingBlock}
 
 **Agent guidance:**
@@ -63,9 +77,30 @@ function generateAgentReviewBrief(report) {
     const topViolations = priorityFindings
         .slice(0, 10)
         .map((f, i) => {
-        const title = f.criterionTitle ?? f.wcag.criteria.join(', ');
+        const criterionId = f.wcag.criteria.find((id) => id !== 'unknown');
+        const checklistItem = criterionId ? checklist.find((c) => c.id === criterionId) : undefined;
+        const hierarchy = checklistItem
+            ? (0, hierarchy_1.formatCriterionHierarchy)(checklistItem)
+            : f.criterionTitle ?? f.wcag.criteria.join(', ');
         const link = f.w3c?.understanding ? ` — [Understanding](${f.w3c.understanding})` : '';
-        return `${i + 1}. **${f.impact}** ${title}: ${f.summary} (\`${f.selector}\`)${link}`;
+        const techniques = f.guidance?.techniques.length ? ` · Techniques: ${f.guidance.techniques.join(', ')}` : '';
+        return `${i + 1}. **${f.impact}** ${hierarchy}: ${f.summary} (\`${f.selector}\`)${techniques}${link}`;
+    })
+        .join('\n');
+    const principleSummary = (0, hierarchy_1.summarizeChecklistByPrinciple)(checklist)
+        .map((p) => `| ${p.principle} | ${p.summary.total} | ${p.summary.failed} | ${p.summary.needsManualReview} | ${p.summary.automatedPass} |`)
+        .join('\n');
+    const wcag22Section = checklist
+        .filter((item) => hierarchy_1.WCAG_22_ONLY_CRITERIA_IDS.includes(item.id))
+        .map((item) => {
+        const statusIcon = item.status === 'failed'
+            ? '❌'
+            : item.status === 'automated-pass'
+                ? '✅'
+                : item.status === 'incomplete'
+                    ? '⚠️'
+                    : '🔍';
+        return `- ${statusIcon} **${item.id}** ${item.title} — \`${item.status}\``;
     })
         .join('\n');
     const w3c = report.w3cReferences;
@@ -78,10 +113,14 @@ function generateAgentReviewBrief(report) {
 
 You are reviewing accessibility audit results. For each issue:
 
-1. Read the **W3C Understanding** link for the success criterion
-2. Use **Agent guidance** (summary, how to test, how to fix) below
-3. Propose **concrete code changes** in the consumer's codebase (file paths, components)
-4. Do not claim full WCAG conformance — flag items needing human/screen reader verification
+1. Trace each issue: **Principle → Guideline → Success Criterion → Technique → Fix**
+2. Read the **W3C Understanding** link for the success criterion
+3. Use **Agent guidance** (summary, how to test, how to fix) below
+4. For **WCAG 2.2-only** criteria, confirm the app targets WCAG 2.2 (not 2.1)
+5. Propose **concrete code changes** in the consumer's codebase (file paths, components)
+6. Do not claim full WCAG conformance — flag items needing human/screen reader verification
+
+**Machine-readable context:** \`a11y-reports/wcag-context.json\` (full hierarchy + 2.2 criteria)
 
 **Official W3C references:**
 - [WCAG 2 Overview](${w3c?.overview ?? 'https://www.w3.org/WAI/standards-guidelines/wcag/'})
@@ -107,6 +146,22 @@ ${topViolations || '_No violations detected._'}
 
 ---
 
+## Coverage by principle
+
+| Principle | Criteria | Failed | Manual review | Automated pass |
+|-----------|----------|--------|---------------|----------------|
+${principleSummary || '| _No checklist data_ | — | — | — | — |'}
+
+---
+
+## WCAG 2.2-only criteria
+
+These success criteria are **new in WCAG 2.2** — easy to miss when upgrading from 2.1:
+
+${wcag22Section || '_No WCAG 2.2-only criteria in scope._'}
+
+---
+
 ## Priority fixes (failed criteria)
 
 ${prioritySections || '_No failed criteria._'}
@@ -121,7 +176,7 @@ ${manualSections || '_All criteria have automated signal or pass._'}
 
 ## Axe incomplete items (${incomplete.length})
 
-${incomplete.length ? incomplete.map(formatFinding).join('\n') : '_None._'}
+${incomplete.length ? incomplete.map((f) => formatFinding(f, checklist)).join('\n') : '_None._'}
 
 ---
 

@@ -4,6 +4,8 @@ export { writeReports, writeJsonReport, writeHtmlReport } from './report';
 export { runBehavioralChecks, runCrossPageChecks, extractNavSignature } from './scanner/behavioral';
 export { buildWcagChecklist, summarizeChecklist } from './wcag/checklist';
 export { getCriteriaForTarget, getCriterion, WCAG_22_CRITERIA } from './wcag/criteria';
+export { WCAG_PRINCIPLES, WCAG_22_ONLY_CRITERIA_IDS, formatCriterionHierarchy, isWcag22OnlyCriterion, summarizeChecklistByPrinciple, } from './wcag/hierarchy';
+export { buildWcagContext } from './wcag/context';
 export { enrichFindings, enrichFinding, enrichChecklist } from './wcag/enrich';
 export { getPlaybookEntry, getPlaybookExport } from './wcag/playbook';
 export { generateAgentReviewBrief } from './agent/review-brief';

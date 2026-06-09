@@ -13,7 +13,7 @@ const checklist_1 = require("./wcag/checklist");
 const waivers_1 = require("./waivers");
 const enrich_1 = require("./wcag/enrich");
 const urls_1 = require("./wcag/urls");
-const PACKAGE_VERSION = '1.4.0';
+const PACKAGE_VERSION = '1.6.0';
 function buildUrl(baseUrl, path) {
     const base = baseUrl.replace(/\/$/, '');
     const route = path.startsWith('/') ? path : `/${path}`;

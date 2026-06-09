@@ -70,7 +70,12 @@ npx a11y-auditor review   # regenerate brief without re-scanning
 
 - **SARIF:** add `'sarif'` to `output.formats` for GitHub Code Scanning
 - **Waivers:** `a11y-waivers.json` — see [enterprise.md](./enterprise.md)
-- **Versions:** pin `github:Joey-trimble/WCAG-auditor-agent#v1.4.0`
+
+## Full W3C context (Phase 6)
+
+- **`wcag-context.json`** — auto-generated hierarchy for AI agents
+- **Upgraded Cursor skill** — run `npx a11y-auditor init` to get `wcag-hierarchy.md` and `wcag-22-new-criteria.md`
+- **Versions:** pin `github:Joey-trimble/WCAG-auditor-agent#v1.6.0`
 
 ## 5. CI
 
