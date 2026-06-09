@@ -2,11 +2,14 @@ import { chromium, type Browser, type Page } from '@playwright/test';
 import { resolve } from 'path';
 import type { AuditFinding, AuditReport, AuditorConfig, Impact, RouteResult } from './types';
 import { evaluateThresholds } from './config';
-import { runAxeScan, countAxePasses } from './scanner/axe';
+import { runAxeScan } from './scanner/axe';
 import { runKeyboardAudit } from './scanner/keyboard';
 import { applyVariant } from './scanner/variants';
+import { buildWcagChecklist, summarizeChecklist } from './wcag/checklist';
+import { enrichFindings } from './wcag/enrich';
+import { getReportW3cReferences } from './wcag/urls';
 
-const PACKAGE_VERSION = '1.0.0';
+const PACKAGE_VERSION = '1.1.0';
 
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/$/, '');
@@ -59,6 +62,7 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
   const browser = await chromium.launch({ headless: true });
   const allFindings: AuditFinding[] = [];
   const routeResults: RouteResult[] = [];
+  const passedCriteria = new Set<string>();
   let totalPasses = 0;
   let keyboardFocusOrder: string[] = [];
   let keyboardIssues: string[] = [];
@@ -82,17 +86,23 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
             variant,
           };
 
-          const axeFindings = await runAxeScan(page, config, ctx);
-          allFindings.push(...axeFindings);
-
-          const passCount = await countAxePasses(page, config);
-          totalPasses += passCount;
+          const axeResult = await runAxeScan(page, config, ctx);
+          allFindings.push(...axeResult.findings);
+          totalPasses += axeResult.passRuleCount;
+          for (const criterion of axeResult.passedCriteria) {
+            passedCriteria.add(criterion);
+          }
 
           if (variant === 'default') {
             const keyboard = await runKeyboardAudit(page, config, ctx);
             allFindings.push(...keyboard.findings);
             keyboardFocusOrder = keyboard.focusOrder;
             keyboardIssues = keyboard.issues;
+
+            if (keyboard.findings.length === 0) {
+              passedCriteria.add('2.1.2');
+              passedCriteria.add('2.4.7');
+            }
           }
 
           routeResults.push({
@@ -100,9 +110,9 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
             name: route.name,
             url,
             variant,
-            violationCount: axeFindings.filter((f) => !f.needsManualReview).length,
-            incompleteCount: axeFindings.filter((f) => f.needsManualReview).length,
-            passCount,
+            violationCount: axeResult.findings.filter((f) => !f.needsManualReview).length,
+            incompleteCount: axeResult.findings.filter((f) => f.needsManualReview).length,
+            passCount: axeResult.passRuleCount,
           });
 
           for (const scenario of scenarios.filter((s) => s.route === route.path)) {
@@ -113,8 +123,12 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
               await applyScenarioSteps(scenarioPage, scenario.steps);
 
               const scenarioCtx = { ...ctx, scenario: scenario.name };
-              const scenarioFindings = await runAxeScan(scenarioPage, config, scenarioCtx);
-              allFindings.push(...scenarioFindings);
+              const scenarioAxe = await runAxeScan(scenarioPage, config, scenarioCtx);
+              allFindings.push(...scenarioAxe.findings);
+              totalPasses += scenarioAxe.passRuleCount;
+              for (const criterion of scenarioAxe.passedCriteria) {
+                passedCriteria.add(criterion);
+              }
 
               routeResults.push({
                 path: route.path,
@@ -122,9 +136,9 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
                 url,
                 variant,
                 scenario: scenario.name,
-                violationCount: scenarioFindings.filter((f) => !f.needsManualReview).length,
-                incompleteCount: scenarioFindings.filter((f) => f.needsManualReview).length,
-                passCount: await countAxePasses(scenarioPage, config),
+                violationCount: scenarioAxe.findings.filter((f) => !f.needsManualReview).length,
+                incompleteCount: scenarioAxe.findings.filter((f) => f.needsManualReview).length,
+                passCount: scenarioAxe.passRuleCount,
               });
             } finally {
               await scenarioPage.context().close();
@@ -139,8 +153,9 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
     await browser.close();
   }
 
-  const violations = allFindings.filter((f) => !f.needsManualReview);
-  const incomplete = allFindings.filter((f) => f.needsManualReview);
+  const enrichedFindings = enrichFindings(allFindings, config.wcag.version);
+  const violations = enrichedFindings.filter((f) => !f.needsManualReview);
+  const incomplete = enrichedFindings.filter((f) => f.needsManualReview);
 
   const byImpact: Record<Impact, number> = {
     critical: 0,
@@ -152,6 +167,8 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
   for (const finding of violations) {
     byImpact[finding.impact]++;
   }
+
+  const wcagChecklist = buildWcagChecklist(config, enrichedFindings, passedCriteria);
 
   const report: AuditReport = {
     meta: {
@@ -169,12 +186,15 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
       byImpact,
       passed: false,
     },
-    findings: allFindings,
+    findings: enrichedFindings,
     routes: routeResults,
     keyboardAudit: {
       focusOrder: keyboardFocusOrder,
       issues: keyboardIssues,
     },
+    wcagChecklist,
+    checklistSummary: summarizeChecklist(wcagChecklist),
+    w3cReferences: getReportW3cReferences(config.wcag.version),
   };
 
   report.summary.passed = evaluateThresholds(report, config);
@@ -197,7 +217,6 @@ export async function auditUrl(
     scenarios: options.scenarios,
   };
 
-  // Override baseUrl handling for single URL
   const parsed = new URL(url);
   config.baseUrl = `${parsed.protocol}//${parsed.host}`;
   config.routes = [{ path: parsed.pathname + parsed.search, name: 'Page' }];

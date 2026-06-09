@@ -1,0 +1,1 @@
+{"version":3,"file":"enrich.d.ts","sourceRoot":"","sources":["../../src/wcag/enrich.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,WAAW,EAAE,MAAM,UAAU,CAAC;AAI1D,wBAAgB,aAAa,CAAC,OAAO,EAAE,YAAY,EAAE,OAAO,EAAE,WAAW,GAAG,YAAY,CAavF;AAED,wBAAgB,cAAc,CAAC,QAAQ,EAAE,YAAY,EAAE,EAAE,OAAO,EAAE,WAAW,GAAG,YAAY,EAAE,CAE7F"}

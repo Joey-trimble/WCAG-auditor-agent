@@ -55,7 +55,11 @@ npm run a11y:audit
 # or: npx a11y-auditor audit
 ```
 
-Open `a11y-reports/report.html` for the human-readable report.
+Open `a11y-reports/report.html` for the human-readable report. It includes:
+
+- **Violations** with W3C Understanding and Quick Ref links
+- **Full WCAG checklist** — every success criterion at your target level, marked as failed, incomplete, automated-pass, or needs-manual-review
+- Official references: [WCAG 2 Overview](https://www.w3.org/WAI/standards-guidelines/wcag/)
 
 ## 5. CI
 

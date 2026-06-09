@@ -1,9 +1,15 @@
 ---
 name: wcag-auditor
-description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpret findings, and suggest fixes mapped to success criteria. Use when auditing pages, reviewing a11y reports, or fixing accessibility violations.
+description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpret findings, and suggest fixes mapped to W3C success criteria. Use when auditing pages, reviewing a11y reports, or fixing accessibility violations.
 ---
 
 # WCAG Auditor
+
+## Official W3C references
+
+- [WCAG 2 Overview](https://www.w3.org/WAI/standards-guidelines/wcag/) — what WCAG is
+- [How to Meet WCAG 2 — Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/) — criteria, techniques, failures
+- [Understanding WCAG 2.2](https://www.w3.org/WAI/WCAG22/Understanding/) — detailed guidance per criterion
 
 ## When to use
 
@@ -21,33 +27,30 @@ description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpr
 
 2. **Read the report** from `./a11y-reports/report.json`.
 
-3. **Triage findings** in this order:
-   - `critical` and `serious` violations (automated failures)
-   - `incomplete` items (manual review queue)
+3. **Review coverage first** — check `wcagChecklist` and `checklistSummary`:
+   - `failed` — automated violations; fix immediately
+   - `incomplete` — axe could not decide; investigate manually
+   - `automated-pass` — axe passed rules for this criterion (not full conformance)
+   - `needs-manual-review` — no automated test; human must verify using W3C Understanding docs
+
+4. **Triage findings** in this order:
+   - `critical` and `serious` violations
+   - `incomplete` axe items
+   - `wcagChecklist` items with `needs-manual-review`
    - Keyboard audit issues from `keyboardAudit.issues`
 
-4. **For each finding**, provide:
-   - WCAG success criteria (`finding.wcag.criteria`)
+5. **For each finding**, provide:
+   - WCAG success criteria and `criterionTitle`
+   - W3C links: `finding.w3c.understanding` and `finding.w3c.quickRef`
    - Impact and rule ID
    - Element selector and route/variant
    - Concrete code fix in the consumer's codebase
-   - Link to `finding.helpUrl` for reference
+   - Axe rule link (`finding.helpUrl`) for technical detail
 
-5. **Manual review items** (`needsManualReview: true`):
-   - State what a human must verify (e.g. alt text meaning, contrast on gradients)
+6. **Manual review items** (`needsManualReview: true` or checklist `needs-manual-review`):
+   - Link to the W3C Understanding document for that criterion
+   - State what a human must verify (e.g. alt text meaning, error recovery)
    - Do not mark as "fixed" without evidence
-
-## WCAG 2.2 AA focus areas
-
-| Area | Common criteria |
-|------|-----------------|
-| Text alternatives | 1.1.1 |
-| Info and relationships | 1.3.1 |
-| Contrast | 1.4.3 |
-| Keyboard | 2.1.1, 2.1.2 |
-| Focus visible | 2.4.7 |
-| Labels | 3.3.2 |
-| Name, role, value | 4.1.2 |
 
 ## Report output template
 
@@ -57,12 +60,13 @@ description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpr
 **Status:** PASSED / FAILED
 **WCAG:** 2.2 AA
 **Violations:** N (critical: X, serious: Y)
+**Criteria coverage:** X failed, Y incomplete, Z need manual review (of 50 total)
 
 ### Top issues
-1. [Impact] Summary — WCAG X.X.X — `selector` — suggested fix
+1. [Impact] Summary — WCAG X.X.X Title — `selector` — [Understanding](url) — suggested fix
 
-### Manual review queue
-- ...
+### Manual review queue (from checklist)
+- 1.2.2 Captions — no automated test — verify prerecorded video has captions
 
 ### Keyboard
 - Focus order notes
@@ -70,6 +74,7 @@ description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpr
 
 ## Limitations
 
-- Automated scans catch ~30–50% of WCAG issues; recommend manual screen reader testing for releases.
+- Automated scans catch a subset of WCAG issues; `wcagChecklist` shows the full gap.
 - Shadow DOM / web components may need source-level review beyond axe selectors.
+- `automated-pass` means axe passed related rules, not guaranteed full SC conformance.
 - This is an engineering aid, not a legal compliance certification.

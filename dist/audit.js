@@ -8,7 +8,10 @@ const config_1 = require("./config");
 const axe_1 = require("./scanner/axe");
 const keyboard_1 = require("./scanner/keyboard");
 const variants_1 = require("./scanner/variants");
-const PACKAGE_VERSION = '1.0.0';
+const checklist_1 = require("./wcag/checklist");
+const enrich_1 = require("./wcag/enrich");
+const urls_1 = require("./wcag/urls");
+const PACKAGE_VERSION = '1.1.0';
 function buildUrl(baseUrl, path) {
     const base = baseUrl.replace(/\/$/, '');
     const route = path.startsWith('/') ? path : `/${path}`;
@@ -48,6 +51,7 @@ async function audit(config) {
     const browser = await test_1.chromium.launch({ headless: true });
     const allFindings = [];
     const routeResults = [];
+    const passedCriteria = new Set();
     let totalPasses = 0;
     let keyboardFocusOrder = [];
     let keyboardIssues = [];
@@ -66,24 +70,30 @@ async function audit(config) {
                         routeName: route.name,
                         variant,
                     };
-                    const axeFindings = await (0, axe_1.runAxeScan)(page, config, ctx);
-                    allFindings.push(...axeFindings);
-                    const passCount = await (0, axe_1.countAxePasses)(page, config);
-                    totalPasses += passCount;
+                    const axeResult = await (0, axe_1.runAxeScan)(page, config, ctx);
+                    allFindings.push(...axeResult.findings);
+                    totalPasses += axeResult.passRuleCount;
+                    for (const criterion of axeResult.passedCriteria) {
+                        passedCriteria.add(criterion);
+                    }
                     if (variant === 'default') {
                         const keyboard = await (0, keyboard_1.runKeyboardAudit)(page, config, ctx);
                         allFindings.push(...keyboard.findings);
                         keyboardFocusOrder = keyboard.focusOrder;
                         keyboardIssues = keyboard.issues;
+                        if (keyboard.findings.length === 0) {
+                            passedCriteria.add('2.1.2');
+                            passedCriteria.add('2.4.7');
+                        }
                     }
                     routeResults.push({
                         path: route.path,
                         name: route.name,
                         url,
                         variant,
-                        violationCount: axeFindings.filter((f) => !f.needsManualReview).length,
-                        incompleteCount: axeFindings.filter((f) => f.needsManualReview).length,
-                        passCount,
+                        violationCount: axeResult.findings.filter((f) => !f.needsManualReview).length,
+                        incompleteCount: axeResult.findings.filter((f) => f.needsManualReview).length,
+                        passCount: axeResult.passRuleCount,
                     });
                     for (const scenario of scenarios.filter((s) => s.route === route.path)) {
                         const scenarioPage = await createPage(browser, config, scenario.auth ?? route.auth);
@@ -92,17 +102,21 @@ async function audit(config) {
                             await (0, variants_1.applyVariant)(scenarioPage, variant);
                             await applyScenarioSteps(scenarioPage, scenario.steps);
                             const scenarioCtx = { ...ctx, scenario: scenario.name };
-                            const scenarioFindings = await (0, axe_1.runAxeScan)(scenarioPage, config, scenarioCtx);
-                            allFindings.push(...scenarioFindings);
+                            const scenarioAxe = await (0, axe_1.runAxeScan)(scenarioPage, config, scenarioCtx);
+                            allFindings.push(...scenarioAxe.findings);
+                            totalPasses += scenarioAxe.passRuleCount;
+                            for (const criterion of scenarioAxe.passedCriteria) {
+                                passedCriteria.add(criterion);
+                            }
                             routeResults.push({
                                 path: route.path,
                                 name: route.name,
                                 url,
                                 variant,
                                 scenario: scenario.name,
-                                violationCount: scenarioFindings.filter((f) => !f.needsManualReview).length,
-                                incompleteCount: scenarioFindings.filter((f) => f.needsManualReview).length,
-                                passCount: await (0, axe_1.countAxePasses)(scenarioPage, config),
+                                violationCount: scenarioAxe.findings.filter((f) => !f.needsManualReview).length,
+                                incompleteCount: scenarioAxe.findings.filter((f) => f.needsManualReview).length,
+                                passCount: scenarioAxe.passRuleCount,
                             });
                         }
                         finally {
@@ -119,8 +133,9 @@ async function audit(config) {
     finally {
         await browser.close();
     }
-    const violations = allFindings.filter((f) => !f.needsManualReview);
-    const incomplete = allFindings.filter((f) => f.needsManualReview);
+    const enrichedFindings = (0, enrich_1.enrichFindings)(allFindings, config.wcag.version);
+    const violations = enrichedFindings.filter((f) => !f.needsManualReview);
+    const incomplete = enrichedFindings.filter((f) => f.needsManualReview);
     const byImpact = {
         critical: 0,
         serious: 0,
@@ -130,6 +145,7 @@ async function audit(config) {
     for (const finding of violations) {
         byImpact[finding.impact]++;
     }
+    const wcagChecklist = (0, checklist_1.buildWcagChecklist)(config, enrichedFindings, passedCriteria);
     const report = {
         meta: {
             tool: 'a11y-auditor-agent',
@@ -146,12 +162,15 @@ async function audit(config) {
             byImpact,
             passed: false,
         },
-        findings: allFindings,
+        findings: enrichedFindings,
         routes: routeResults,
         keyboardAudit: {
             focusOrder: keyboardFocusOrder,
             issues: keyboardIssues,
         },
+        wcagChecklist,
+        checklistSummary: (0, checklist_1.summarizeChecklist)(wcagChecklist),
+        w3cReferences: (0, urls_1.getReportW3cReferences)(config.wcag.version),
     };
     report.summary.passed = (0, config_1.evaluateThresholds)(report, config);
     return report;
@@ -168,7 +187,6 @@ async function auditUrl(url, options = {}) {
         auth: options.auth,
         scenarios: options.scenarios,
     };
-    // Override baseUrl handling for single URL
     const parsed = new URL(url);
     config.baseUrl = `${parsed.protocol}//${parsed.host}`;
     config.routes = [{ path: parsed.pathname + parsed.search, name: 'Page' }];

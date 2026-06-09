@@ -20,29 +20,71 @@ function impactBadge(impact) {
     const color = colors[impact] ?? '#616161';
     return `<span style="background:${color};color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;text-transform:uppercase">${escapeHtml(impact)}</span>`;
 }
+function statusBadge(status) {
+    const styles = {
+        failed: { bg: '#c62828', label: 'Failed' },
+        incomplete: { bg: '#6a1b9a', label: 'Incomplete' },
+        'automated-pass': { bg: '#2e7d32', label: 'Automated pass' },
+        'needs-manual-review': { bg: '#616161', label: 'Manual review' },
+    };
+    const style = styles[status];
+    return `<span style="background:${style.bg};color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;white-space:nowrap">${style.label}</span>`;
+}
+function renderW3cLinks(f) {
+    if (!f.w3c) {
+        return `<a href="${escapeHtml(f.helpUrl)}" target="_blank" rel="noopener">Rule docs</a>`;
+    }
+    return `
+    <a href="${escapeHtml(f.w3c.understanding)}" target="_blank" rel="noopener">Understanding</a> ·
+    <a href="${escapeHtml(f.w3c.quickRef)}" target="_blank" rel="noopener">Quick Ref</a> ·
+    <a href="${escapeHtml(f.helpUrl)}" target="_blank" rel="noopener">Axe rule</a>`;
+}
 function renderFinding(f) {
+    const criterionLabel = f.criterionTitle
+        ? `${f.wcag.criteria.join(', ')} — ${escapeHtml(f.criterionTitle)}`
+        : escapeHtml(f.wcag.criteria.join(', '));
     return `
     <article class="finding" style="border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:12px">
-      <header style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <header style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         ${impactBadge(f.impact)}
         <strong>${escapeHtml(f.summary)}</strong>
         ${f.needsManualReview ? '<span style="color:#6a1b9a">Manual review</span>' : ''}
       </header>
       <p style="color:#555;margin:0 0 8px">${escapeHtml(f.description)}</p>
       <dl style="margin:0;font-size:14px">
-        <dt><strong>WCAG</strong></dt><dd>${escapeHtml(f.wcag.criteria.join(', '))}</dd>
+        <dt><strong>WCAG</strong></dt><dd>${criterionLabel}</dd>
         <dt><strong>Rule</strong></dt><dd><code>${escapeHtml(f.rule)}</code></dd>
         <dt><strong>Route</strong></dt><dd>${escapeHtml(f.route)} (${escapeHtml(f.variant)})</dd>
         <dt><strong>Selector</strong></dt><dd><code>${escapeHtml(f.selector)}</code></dd>
-        <dt><strong>Help</strong></dt><dd><a href="${escapeHtml(f.helpUrl)}" target="_blank" rel="noopener">${escapeHtml(f.helpUrl)}</a></dd>
+        <dt><strong>W3C references</strong></dt><dd>${renderW3cLinks(f)}</dd>
       </dl>
     </article>`;
+}
+function renderChecklistItem(item) {
+    const newBadge = item.introducedIn === '2.2'
+        ? ' <span style="font-size:11px;color:#1565c0">(WCAG 2.2)</span>'
+        : '';
+    return `
+    <tr>
+      <td><code>${escapeHtml(item.id)}</code>${newBadge}</td>
+      <td>${escapeHtml(item.title)}</td>
+      <td>${escapeHtml(item.principle)}</td>
+      <td>${statusBadge(item.status)}</td>
+      <td style="white-space:nowrap">
+        <a href="${escapeHtml(item.w3c.understanding)}" target="_blank" rel="noopener">Understanding</a> ·
+        <a href="${escapeHtml(item.w3c.quickRef)}" target="_blank" rel="noopener">Quick Ref</a>
+      </td>
+    </tr>`;
 }
 function writeHtmlReport(report, outputPath) {
     const violations = report.findings.filter((f) => !f.needsManualReview);
     const manual = report.findings.filter((f) => f.needsManualReview);
     const statusColor = report.summary.passed ? '#2e7d32' : '#c62828';
     const statusText = report.summary.passed ? 'PASSED' : 'FAILED';
+    const checklist = report.wcagChecklist ?? [];
+    const checklistSummary = report.checklistSummary;
+    const w3c = report.w3cReferences;
+    const manualReviewItems = checklist.filter((c) => c.status === 'needs-manual-review');
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,20 +93,28 @@ function writeHtmlReport(report, outputPath) {
   <title>Accessibility Audit — ${escapeHtml(report.meta.baseUrl)}</title>
   <style>
     body { font-family: 'Open Sans', system-ui, sans-serif; margin: 0; background: #f6f6f9; color: #252a2e; }
-    main { max-width: 960px; margin: 0 auto; padding: 24px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
     h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    h2 { font-size: 1.15rem; margin-bottom: 12px; }
     .meta { color: #6a7075; font-size: 14px; margin-bottom: 24px; }
     .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
     .card { background: #fff; border-radius: 8px; padding: 16px; }
     .card strong { display: block; font-size: 1.5rem; }
     section { margin-bottom: 32px; }
     code { background: #eee; padding: 2px 4px; border-radius: 4px; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; font-size: 14px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+    th { background: #f0f0f3; font-weight: 600; }
+    .note { background: #fff; border-left: 4px solid #1565c0; padding: 12px 16px; border-radius: 4px; font-size: 14px; color: #444; }
   </style>
 </head>
 <body>
   <main>
     <h1>WCAG ${escapeHtml(report.meta.wcag.version)} ${escapeHtml(report.meta.wcag.level)} Audit</h1>
-    <p class="meta">${escapeHtml(report.meta.baseUrl)} · ${escapeHtml(report.meta.timestamp)} · a11y-auditor-agent v${escapeHtml(report.meta.version)}</p>
+    <p class="meta">
+      ${escapeHtml(report.meta.baseUrl)} · ${escapeHtml(report.meta.timestamp)} · a11y-auditor-agent v${escapeHtml(report.meta.version)}
+      ${w3c ? ` · <a href="${escapeHtml(w3c.overview)}" target="_blank" rel="noopener">W3C WCAG Overview</a>` : ''}
+    </p>
 
     <div class="summary">
       <div class="card" style="border-left:4px solid ${statusColor}">
@@ -72,10 +122,45 @@ function writeHtmlReport(report, outputPath) {
         <strong style="color:${statusColor}">${statusText}</strong>
       </div>
       <div class="card"><span>Violations</span><strong>${report.summary.violations}</strong></div>
-      <div class="card"><span>Manual review</span><strong>${report.summary.incomplete}</strong></div>
+      <div class="card"><span>Manual review (axe)</span><strong>${report.summary.incomplete}</strong></div>
       <div class="card"><span>Critical</span><strong>${report.summary.byImpact.critical}</strong></div>
       <div class="card"><span>Serious</span><strong>${report.summary.byImpact.serious}</strong></div>
+      ${checklistSummary
+        ? `<div class="card"><span>Criteria needing manual review</span><strong>${checklistSummary.needsManualReview}</strong></div>`
+        : ''}
     </div>
+
+    ${checklistSummary
+        ? `<section>
+      <h2>WCAG ${escapeHtml(report.meta.wcag.version)} ${escapeHtml(report.meta.wcag.level)} coverage summary</h2>
+      <div class="note" style="margin-bottom:16px">
+        Full checklist of all ${checklistSummary.total} success criteria at your target level.
+        Automated tools cannot test every criterion — items marked <strong>Manual review</strong> need human verification.
+        Official references: <a href="${w3c ? escapeHtml(w3c.overview) : '#'}" target="_blank" rel="noopener">WCAG Overview</a>,
+        <a href="${w3c ? escapeHtml(w3c.quickRef) : '#'}" target="_blank" rel="noopener">Quick Reference</a>.
+      </div>
+      <div class="summary" style="margin-bottom:16px">
+        <div class="card"><span>Failed</span><strong style="color:#c62828">${checklistSummary.failed}</strong></div>
+        <div class="card"><span>Incomplete</span><strong style="color:#6a1b9a">${checklistSummary.incomplete}</strong></div>
+        <div class="card"><span>Automated pass</span><strong style="color:#2e7d32">${checklistSummary.automatedPass}</strong></div>
+        <div class="card"><span>Needs manual review</span><strong>${checklistSummary.needsManualReview}</strong></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Criterion</th>
+            <th>Title</th>
+            <th>Principle</th>
+            <th>Status</th>
+            <th>W3C</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${checklist.map(renderChecklistItem).join('')}
+        </tbody>
+      </table>
+    </section>`
+        : ''}
 
     <section>
       <h2>Violations (${violations.length})</h2>
@@ -83,9 +168,19 @@ function writeHtmlReport(report, outputPath) {
     </section>
 
     <section>
-      <h2>Manual review queue (${manual.length})</h2>
-      ${manual.length ? manual.map(renderFinding).join('') : '<p>No items requiring manual review.</p>'}
+      <h2>Axe incomplete / manual review queue (${manual.length})</h2>
+      ${manual.length ? manual.map(renderFinding).join('') : '<p>No axe items requiring manual review.</p>'}
     </section>
+
+    ${manualReviewItems.length
+        ? `<section>
+      <h2>Success criteria requiring manual review (${manualReviewItems.length})</h2>
+      <p class="note">These WCAG criteria were not fully tested by automation. Review using W3C Understanding docs.</p>
+      <ul>
+        ${manualReviewItems.map((item) => `<li><strong>${escapeHtml(item.id)} ${escapeHtml(item.title)}</strong> — <a href="${escapeHtml(item.w3c.understanding)}" target="_blank" rel="noopener">Understanding</a></li>`).join('')}
+      </ul>
+    </section>`
+        : ''}
 
     ${report.keyboardAudit?.focusOrder.length
         ? `<section>

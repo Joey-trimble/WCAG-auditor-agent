@@ -13,7 +13,7 @@ function normalizeImpact(impact?: string | null): Impact {
   return 'moderate';
 }
 
-function extractWcagCriteria(tags: string[]): string[] {
+export function extractWcagCriteria(tags: string[]): string[] {
   return tags
     .filter((tag) => /^wcag\d{3}$/.test(tag) || /^wcag\d{4}$/.test(tag))
     .map((tag) => {
@@ -64,6 +64,12 @@ function nodeToFinding(
   };
 }
 
+export type AxeScanResult = {
+  findings: AuditFinding[];
+  passedCriteria: string[];
+  passRuleCount: number;
+};
+
 export async function runAxeScan(
   page: Page,
   config: AuditorConfig,
@@ -73,7 +79,7 @@ export async function runAxeScan(
     variant: PageVariant;
     scenario?: string;
   },
-): Promise<AuditFinding[]> {
+): Promise<AxeScanResult> {
   const tags = getWcagTags(config.wcag.version, config.wcag.level);
 
   let builder = new AxeBuilder({ page }).withTags(tags);
@@ -121,17 +127,16 @@ export async function runAxeScan(
     }
   }
 
-  return findings;
-}
-
-export async function countAxePasses(page: Page, config: AuditorConfig): Promise<number> {
-  const tags = getWcagTags(config.wcag.version, config.wcag.level);
-  let builder = new AxeBuilder({ page }).withTags(tags);
-
-  if (config.axe?.disableRules?.length) {
-    builder = builder.disableRules(config.axe.disableRules);
+  const passedCriteria = new Set<string>();
+  for (const pass of results.passes) {
+    for (const criterion of extractWcagCriteria(pass.tags)) {
+      passedCriteria.add(criterion);
+    }
   }
 
-  const results = await builder.analyze();
-  return results.passes.length;
+  return {
+    findings,
+    passedCriteria: [...passedCriteria],
+    passRuleCount: results.passes.length,
+  };
 }

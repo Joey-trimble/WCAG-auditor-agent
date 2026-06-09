@@ -46,6 +46,8 @@ Add to `package.json`:
 ## Features
 
 - WCAG 2.1 / 2.2 levels A, AA, AAA (default: **2.2 AA**)
+- **Full WCAG checklist** in every report — all success criteria with status
+- **W3C official links** on every finding ([Overview](https://www.w3.org/WAI/standards-guidelines/wcag/), Understanding, Quick Ref)
 - Multi-route scanning with auth profiles (`storageState`)
 - Page variants: default, dark mode, 200% zoom
 - Scenario steps (open menus, dialogs) before scan

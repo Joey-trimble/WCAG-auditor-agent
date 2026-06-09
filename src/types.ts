@@ -48,6 +48,38 @@ export type AuditorConfig = {
   };
 };
 
+export type W3cLinks = {
+  overview: string;
+  understanding: string;
+  quickRef: string;
+};
+
+export type ChecklistStatus =
+  | 'failed'
+  | 'incomplete'
+  | 'automated-pass'
+  | 'needs-manual-review';
+
+export type ChecklistItem = {
+  id: string;
+  title: string;
+  level: 'A' | 'AA' | 'AAA';
+  principle: string;
+  guideline: string;
+  status: ChecklistStatus;
+  introducedIn?: WcagVersion;
+  w3c: W3cLinks;
+  findingCount: number;
+};
+
+export type ChecklistSummary = {
+  total: number;
+  failed: number;
+  incomplete: number;
+  automatedPass: number;
+  needsManualReview: number;
+};
+
 export type AuditFinding = {
   id: string;
   wcag: {
@@ -69,6 +101,8 @@ export type AuditFinding = {
   variant: PageVariant;
   scenario?: string;
   source: 'axe' | 'keyboard';
+  criterionTitle?: string;
+  w3c?: W3cLinks;
 };
 
 export type RouteResult = {
@@ -104,6 +138,9 @@ export type AuditReport = {
     focusOrder: string[];
     issues: string[];
   };
+  wcagChecklist?: ChecklistItem[];
+  checklistSummary?: ChecklistSummary;
+  w3cReferences?: W3cLinks;
 };
 
 export type AuditOptions = Partial<AuditorConfig> & {

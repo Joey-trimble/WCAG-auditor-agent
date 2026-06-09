@@ -3,8 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.extractWcagCriteria = extractWcagCriteria;
 exports.runAxeScan = runAxeScan;
-exports.countAxePasses = countAxePasses;
 const playwright_1 = __importDefault(require("@axe-core/playwright"));
 const config_1 = require("../config");
 const IMPACT_ORDER = ['critical', 'serious', 'moderate', 'minor'];
@@ -89,15 +89,16 @@ async function runAxeScan(page, config, ctx) {
             }));
         }
     }
-    return findings;
-}
-async function countAxePasses(page, config) {
-    const tags = (0, config_1.getWcagTags)(config.wcag.version, config.wcag.level);
-    let builder = new playwright_1.default({ page }).withTags(tags);
-    if (config.axe?.disableRules?.length) {
-        builder = builder.disableRules(config.axe.disableRules);
+    const passedCriteria = new Set();
+    for (const pass of results.passes) {
+        for (const criterion of extractWcagCriteria(pass.tags)) {
+            passedCriteria.add(criterion);
+        }
     }
-    const results = await builder.analyze();
-    return results.passes.length;
+    return {
+        findings,
+        passedCriteria: [...passedCriteria],
+        passRuleCount: results.passes.length,
+    };
 }
 //# sourceMappingURL=axe.js.map
