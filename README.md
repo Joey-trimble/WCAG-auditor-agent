@@ -48,6 +48,7 @@ Add to `package.json`:
 - WCAG 2.1 / 2.2 levels A, AA, AAA (default: **2.2 AA**)
 - **Full WCAG checklist** in every report — all success criteria with status
 - **W3C official links** on every finding ([Overview](https://www.w3.org/WAI/standards-guidelines/wcag/), Understanding, Quick Ref)
+- **Behavioral checks (Phase 2)** — page title, lang, landmarks, skip links, reflow, target size, consistent nav
 - Multi-route scanning with auth profiles (`storageState`)
 - Page variants: default, dark mode, 200% zoom
 - Scenario steps (open menus, dialogs) before scan
@@ -60,6 +61,7 @@ Add to `package.json`:
 | Doc | Purpose |
 |-----|---------|
 | [docs/adoption.md](./docs/adoption.md) | Team onboarding |
+| [docs/behavioral-checks.md](./docs/behavioral-checks.md) | Phase 2 behavioral test reference |
 | [docs/sharing.md](./docs/sharing.md) | GitHub repo, releases, install options |
 | [templates/a11y-auditor.config.example.ts](./templates/a11y-auditor.config.example.ts) | Full config reference |
 

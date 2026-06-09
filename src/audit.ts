@@ -3,13 +3,19 @@ import { resolve } from 'path';
 import type { AuditFinding, AuditReport, AuditorConfig, Impact, RouteResult } from './types';
 import { evaluateThresholds } from './config';
 import { runAxeScan } from './scanner/axe';
+import {
+  extractNavSignature,
+  runBehavioralChecks,
+  runCrossPageChecks,
+  type NavSignature,
+} from './scanner/behavioral';
 import { runKeyboardAudit } from './scanner/keyboard';
 import { applyVariant } from './scanner/variants';
 import { buildWcagChecklist, summarizeChecklist } from './wcag/checklist';
 import { enrichFindings } from './wcag/enrich';
 import { getReportW3cReferences } from './wcag/urls';
 
-const PACKAGE_VERSION = '1.1.0';
+const PACKAGE_VERSION = '1.2.0';
 
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/$/, '');
@@ -32,13 +38,21 @@ async function applyScenarioSteps(page: Page, steps: string[]): Promise<void> {
       continue;
     }
 
+    const pressMatch = step.match(/^press\s+(.+)$/i);
+    if (pressMatch) {
+      await page.keyboard.press(pressMatch[1].trim());
+      continue;
+    }
+
     const waitMatch = step.match(/^wait\s+(\d+)ms$/i);
     if (waitMatch) {
       await page.waitForTimeout(Number(waitMatch[1]));
       continue;
     }
 
-    throw new Error(`Unsupported scenario step: "${step}". Supported: click <selector>, type <text> into <selector>, wait <n>ms`);
+    throw new Error(
+      'Unsupported scenario step. Supported: click <selector>, type <text> into <selector>, press <key>, wait <n>ms',
+    );
   }
 }
 
@@ -58,17 +72,33 @@ async function createPage(
   return context.newPage();
 }
 
+function mergeBehavioralResult(
+  result: { findings: AuditFinding[]; passedCriteria: string[]; passedChecks: string[] },
+  allFindings: AuditFinding[],
+  passedCriteria: Set<string>,
+  allPassedChecks: string[],
+): void {
+  allFindings.push(...result.findings);
+  for (const criterion of result.passedCriteria) {
+    passedCriteria.add(criterion);
+  }
+  allPassedChecks.push(...result.passedChecks);
+}
+
 export async function audit(config: AuditorConfig): Promise<AuditReport> {
   const browser = await chromium.launch({ headless: true });
   const allFindings: AuditFinding[] = [];
   const routeResults: RouteResult[] = [];
   const passedCriteria = new Set<string>();
+  const behavioralPassedChecks: string[] = [];
+  const navSignatures: NavSignature[] = [];
   let totalPasses = 0;
   let keyboardFocusOrder: string[] = [];
   let keyboardIssues: string[] = [];
 
   const variants = config.variants ?? ['default'];
   const scenarios = config.scenarios ?? [];
+  const behavioralEnabled = config.behavioral?.enabled !== false;
 
   try {
     for (const route of config.routes) {
@@ -86,7 +116,10 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
             variant,
           };
 
+          const pageFindings: AuditFinding[] = [];
+
           const axeResult = await runAxeScan(page, config, ctx);
+          pageFindings.push(...axeResult.findings);
           allFindings.push(...axeResult.findings);
           totalPasses += axeResult.passRuleCount;
           for (const criterion of axeResult.passedCriteria) {
@@ -95,6 +128,7 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
 
           if (variant === 'default') {
             const keyboard = await runKeyboardAudit(page, config, ctx);
+            pageFindings.push(...keyboard.findings);
             allFindings.push(...keyboard.findings);
             keyboardFocusOrder = keyboard.focusOrder;
             keyboardIssues = keyboard.issues;
@@ -103,6 +137,16 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
               passedCriteria.add('2.1.2');
               passedCriteria.add('2.4.7');
             }
+
+            if (behavioralEnabled) {
+              navSignatures.push(await extractNavSignature(page, route.path));
+            }
+          }
+
+          if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200')) {
+            const behavioral = await runBehavioralChecks(page, config, ctx);
+            pageFindings.push(...behavioral.findings);
+            mergeBehavioralResult(behavioral, allFindings, passedCriteria, behavioralPassedChecks);
           }
 
           routeResults.push({
@@ -110,8 +154,8 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
             name: route.name,
             url,
             variant,
-            violationCount: axeResult.findings.filter((f) => !f.needsManualReview).length,
-            incompleteCount: axeResult.findings.filter((f) => f.needsManualReview).length,
+            violationCount: pageFindings.filter((f) => !f.needsManualReview).length,
+            incompleteCount: pageFindings.filter((f) => f.needsManualReview).length,
             passCount: axeResult.passRuleCount,
           });
 
@@ -123,11 +167,20 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
               await applyScenarioSteps(scenarioPage, scenario.steps);
 
               const scenarioCtx = { ...ctx, scenario: scenario.name };
+              const scenarioFindings: AuditFinding[] = [];
+
               const scenarioAxe = await runAxeScan(scenarioPage, config, scenarioCtx);
+              scenarioFindings.push(...scenarioAxe.findings);
               allFindings.push(...scenarioAxe.findings);
               totalPasses += scenarioAxe.passRuleCount;
               for (const criterion of scenarioAxe.passedCriteria) {
                 passedCriteria.add(criterion);
+              }
+
+              if (behavioralEnabled && (variant === 'default' || variant === 'zoom-200')) {
+                const scenarioBehavioral = await runBehavioralChecks(scenarioPage, config, scenarioCtx);
+                scenarioFindings.push(...scenarioBehavioral.findings);
+                mergeBehavioralResult(scenarioBehavioral, allFindings, passedCriteria, behavioralPassedChecks);
               }
 
               routeResults.push({
@@ -136,8 +189,8 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
                 url,
                 variant,
                 scenario: scenario.name,
-                violationCount: scenarioAxe.findings.filter((f) => !f.needsManualReview).length,
-                incompleteCount: scenarioAxe.findings.filter((f) => f.needsManualReview).length,
+                violationCount: scenarioFindings.filter((f) => !f.needsManualReview).length,
+                incompleteCount: scenarioFindings.filter((f) => f.needsManualReview).length,
                 passCount: scenarioAxe.passRuleCount,
               });
             } finally {
@@ -148,6 +201,11 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
           await page.context().close();
         }
       }
+    }
+
+    if (behavioralEnabled && navSignatures.length >= 2) {
+      const crossPage = runCrossPageChecks(config, navSignatures);
+      mergeBehavioralResult(crossPage, allFindings, passedCriteria, behavioralPassedChecks);
     }
   } finally {
     await browser.close();
@@ -192,6 +250,12 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
       focusOrder: keyboardFocusOrder,
       issues: keyboardIssues,
     },
+    behavioralAudit: behavioralEnabled
+      ? {
+          passedChecks: [...new Set(behavioralPassedChecks)],
+          checksRun: [...new Set(behavioralPassedChecks)].length,
+        }
+      : undefined,
     wcagChecklist,
     checklistSummary: summarizeChecklist(wcagChecklist),
     w3cReferences: getReportW3cReferences(config.wcag.version),
@@ -215,6 +279,7 @@ export async function auditUrl(
     axe: options.axe,
     auth: options.auth,
     scenarios: options.scenarios,
+    behavioral: options.behavioral,
   };
 
   const parsed = new URL(url);

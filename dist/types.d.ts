@@ -42,6 +42,9 @@ export type AuditorConfig = {
         dir?: string;
         formats?: ReportFormat[];
     };
+    behavioral?: {
+        enabled?: boolean;
+    };
 };
 export type W3cLinks = {
     overview: string;
@@ -87,7 +90,7 @@ export type AuditFinding = {
     routeName?: string;
     variant: PageVariant;
     scenario?: string;
-    source: 'axe' | 'keyboard';
+    source: 'axe' | 'keyboard' | 'behavioral';
     criterionTitle?: string;
     w3c?: W3cLinks;
 };
@@ -125,6 +128,10 @@ export type AuditReport = {
     keyboardAudit?: {
         focusOrder: string[];
         issues: string[];
+    };
+    behavioralAudit?: {
+        passedChecks: string[];
+        checksRun: number;
     };
     wcagChecklist?: ChecklistItem[];
     checklistSummary?: ChecklistSummary;

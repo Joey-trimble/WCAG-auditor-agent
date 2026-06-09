@@ -53,7 +53,7 @@ function renderFinding(f) {
       <p style="color:#555;margin:0 0 8px">${escapeHtml(f.description)}</p>
       <dl style="margin:0;font-size:14px">
         <dt><strong>WCAG</strong></dt><dd>${criterionLabel}</dd>
-        <dt><strong>Rule</strong></dt><dd><code>${escapeHtml(f.rule)}</code></dd>
+        <dt><strong>Rule</strong></dt><dd><code>${escapeHtml(f.rule)}</code> <span style="color:#6a7075">(${escapeHtml(f.source)})</span></dd>
         <dt><strong>Route</strong></dt><dd>${escapeHtml(f.route)} (${escapeHtml(f.variant)})</dd>
         <dt><strong>Selector</strong></dt><dd><code>${escapeHtml(f.selector)}</code></dd>
         <dt><strong>W3C references</strong></dt><dd>${renderW3cLinks(f)}</dd>
@@ -159,6 +159,14 @@ function writeHtmlReport(report, outputPath) {
           ${checklist.map(renderChecklistItem).join('')}
         </tbody>
       </table>
+    </section>`
+        : ''}
+
+    ${report.behavioralAudit
+        ? `<section>
+      <h2>Behavioral checks (Phase 2)</h2>
+      <p class="note">ACT-aligned Playwright tests beyond axe: page title, language, landmarks, skip links, reflow, target size, and more.</p>
+      <p><strong>${report.behavioralAudit.checksRun}</strong> checks passed. Passed: <code>${report.behavioralAudit.passedChecks.map(escapeHtml).join('</code>, <code>')}</code></p>
     </section>`
         : ''}
 

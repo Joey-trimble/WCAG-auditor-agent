@@ -21,11 +21,18 @@ const config: AuditorConfig = {
 
   // scenarios: [
   //   {
-  //     name: 'Main menu open',
+  //     name: 'Mobile menu open',
   //     route: '/',
-  //     steps: ['click [data-testid=menu-toggle]'],
+  //     steps: ['click [data-testid=menu-toggle]', 'wait 300ms'],
+  //   },
+  //   {
+  //     name: 'Settings dialog',
+  //     route: '/settings',
+  //     steps: ['click #open-settings', 'wait 300ms'],
   //   },
   // ],
+
+  // behavioral: { enabled: true },
 
   variants: ['default', 'dark'],
 

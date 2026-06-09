@@ -33,13 +33,18 @@ description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpr
    - `automated-pass` — axe passed rules for this criterion (not full conformance)
    - `needs-manual-review` — no automated test; human must verify using W3C Understanding docs
 
-4. **Triage findings** in this order:
+4. **Review behavioral checks** — see `behavioralAudit.passedChecks` and behavioral findings (`source: "behavioral"`):
+   - Page title (2.4.2), lang (3.1.1), landmarks, skip links, reflow, target size, consistent nav
+   - See [docs/behavioral-checks.md](https://github.com/Joey-trimble/WCAG-auditor-agent/blob/main/docs/behavioral-checks.md)
+
+5. **Triage findings** in this order:
    - `critical` and `serious` violations
    - `incomplete` axe items
+   - Behavioral findings flagged `needsManualReview`
    - `wcagChecklist` items with `needs-manual-review`
    - Keyboard audit issues from `keyboardAudit.issues`
 
-5. **For each finding**, provide:
+6. **For each finding**, provide:
    - WCAG success criteria and `criterionTitle`
    - W3C links: `finding.w3c.understanding` and `finding.w3c.quickRef`
    - Impact and rule ID
@@ -47,7 +52,7 @@ description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpr
    - Concrete code fix in the consumer's codebase
    - Axe rule link (`finding.helpUrl`) for technical detail
 
-6. **Manual review items** (`needsManualReview: true` or checklist `needs-manual-review`):
+7. **Manual review items** (`needsManualReview: true` or checklist `needs-manual-review`):
    - Link to the W3C Understanding document for that criterion
    - State what a human must verify (e.g. alt text meaning, error recovery)
    - Do not mark as "fixed" without evidence

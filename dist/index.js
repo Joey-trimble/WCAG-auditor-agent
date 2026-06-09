@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getReportW3cReferences = exports.buildW3cLinks = exports.enrichFinding = exports.enrichFindings = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
+exports.getReportW3cReferences = exports.buildW3cLinks = exports.enrichFinding = exports.enrichFindings = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.extractNavSignature = exports.runCrossPageChecks = exports.runBehavioralChecks = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
 var audit_1 = require("./audit");
 Object.defineProperty(exports, "audit", { enumerable: true, get: function () { return audit_1.audit; } });
 Object.defineProperty(exports, "auditUrl", { enumerable: true, get: function () { return audit_1.auditUrl; } });
@@ -14,6 +14,10 @@ var report_1 = require("./report");
 Object.defineProperty(exports, "writeReports", { enumerable: true, get: function () { return report_1.writeReports; } });
 Object.defineProperty(exports, "writeJsonReport", { enumerable: true, get: function () { return report_1.writeJsonReport; } });
 Object.defineProperty(exports, "writeHtmlReport", { enumerable: true, get: function () { return report_1.writeHtmlReport; } });
+var behavioral_1 = require("./scanner/behavioral");
+Object.defineProperty(exports, "runBehavioralChecks", { enumerable: true, get: function () { return behavioral_1.runBehavioralChecks; } });
+Object.defineProperty(exports, "runCrossPageChecks", { enumerable: true, get: function () { return behavioral_1.runCrossPageChecks; } });
+Object.defineProperty(exports, "extractNavSignature", { enumerable: true, get: function () { return behavioral_1.extractNavSignature; } });
 var checklist_1 = require("./wcag/checklist");
 Object.defineProperty(exports, "buildWcagChecklist", { enumerable: true, get: function () { return checklist_1.buildWcagChecklist; } });
 Object.defineProperty(exports, "summarizeChecklist", { enumerable: true, get: function () { return checklist_1.summarizeChecklist; } });
