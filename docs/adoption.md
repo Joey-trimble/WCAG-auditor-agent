@@ -60,6 +60,11 @@ Open `a11y-reports/report.html` for the human-readable report. It includes:
 - **Violations** with W3C Understanding and Quick Ref links
 - **Full WCAG checklist** — every success criterion at your target level, marked as failed, incomplete, automated-pass, or needs-manual-review
 - Official references: [WCAG 2 Overview](https://www.w3.org/WAI/standards-guidelines/wcag/)
+- **Agent brief:** `a11y-reports/agent-review.md` — paste into Cursor for AI-guided fixes
+
+```bash
+npx a11y-auditor review   # regenerate brief without re-scanning
+```
 
 ## 5. CI
 

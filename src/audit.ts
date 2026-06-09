@@ -12,10 +12,10 @@ import {
 import { runKeyboardAudit } from './scanner/keyboard';
 import { applyVariant } from './scanner/variants';
 import { buildWcagChecklist, summarizeChecklist } from './wcag/checklist';
-import { enrichFindings } from './wcag/enrich';
+import { enrichChecklist, enrichFindings } from './wcag/enrich';
 import { getReportW3cReferences } from './wcag/urls';
 
-const PACKAGE_VERSION = '1.2.0';
+const PACKAGE_VERSION = '1.3.0';
 
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/$/, '');
@@ -226,7 +226,7 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
     byImpact[finding.impact]++;
   }
 
-  const wcagChecklist = buildWcagChecklist(config, enrichedFindings, passedCriteria);
+  const wcagChecklist = enrichChecklist(buildWcagChecklist(config, enrichedFindings, passedCriteria));
 
   const report: AuditReport = {
     meta: {

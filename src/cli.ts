@@ -3,7 +3,8 @@ import { existsSync, copyFileSync, mkdirSync, readFileSync, writeFileSync } from
 import { dirname, join, resolve } from 'path';
 import { audit } from './audit';
 import { loadConfig } from './config';
-import { writeReports } from './report';
+import { writeReports, writeAgentReviewBrief } from './report';
+import type { AuditReport } from './types';
 
 const PACKAGE_ROOT = resolve(__dirname, '..');
 
@@ -13,11 +14,13 @@ a11y-auditor — WCAG accessibility auditor for teams
 
 Usage:
   a11y-auditor audit [--config <path>] [--cwd <dir>]
+  a11y-auditor review [--report <path>] [--cwd <dir>]
   a11y-auditor init [--cwd <dir>]
   a11y-auditor --help
 
 Commands:
   audit   Run WCAG scan using a11y-auditor.config.ts (or .json)
+  review  Generate agent-review.md from an existing report.json
   init    Scaffold config, npm script hint, GitHub Action, and Cursor skill
 
 Options:
@@ -48,9 +51,30 @@ Summary:
   Critical:       ${report.summary.byImpact.critical}
   Serious:        ${report.summary.byImpact.serious}
   Status:         ${report.summary.passed ? 'PASSED' : 'FAILED'}
+
+Open a11y-reports/agent-review.md in Cursor for AI-guided fixes.
 `);
 
   return report.summary.passed ? 0 : 1;
+}
+
+async function runReview(args: string[]): Promise<number> {
+  const cwd = getArg(args, '--cwd') ?? process.cwd();
+  const reportPath = getArg(args, '--report') ?? join(cwd, 'a11y-reports', 'report.json');
+
+  if (!existsSync(reportPath)) {
+    console.error(`Report not found: ${reportPath}`);
+    console.error('Run "a11y-auditor audit" first, or pass --report <path>');
+    return 2;
+  }
+
+  const report = JSON.parse(readFileSync(reportPath, 'utf-8')) as AuditReport;
+  const outputPath = join(dirname(reportPath), 'agent-review.md');
+  writeAgentReviewBrief(report, outputPath);
+
+  console.log(`Agent review brief written: ${outputPath}`);
+  console.log('\nOpen in Cursor and ask: "Review agent-review.md and suggest fixes"');
+  return 0;
 }
 
 async function runInit(args: string[]): Promise<number> {
@@ -78,11 +102,15 @@ async function runInit(args: string[]): Promise<number> {
   const skillDestDir = join(cwd, '.cursor', 'skills', 'wcag-auditor');
   mkdirSync(skillDestDir, { recursive: true });
   const skillDest = join(skillDestDir, 'SKILL.md');
-  if (!existsSync(skillDest)) {
-    copyFileSync(join(templatesDir, 'cursor-skill', 'wcag-auditor', 'SKILL.md'), skillDest);
-    console.log(`Created ${skillDest}`);
-  } else {
-    console.log(`Skipped ${skillDest} (already exists)`);
+  const skillTemplateDir = join(templatesDir, 'cursor-skill', 'wcag-auditor');
+  for (const file of ['SKILL.md', 'reference.md']) {
+    const dest = join(skillDestDir, file);
+    if (!existsSync(dest)) {
+      copyFileSync(join(skillTemplateDir, file), dest);
+      console.log(`Created ${dest}`);
+    } else {
+      console.log(`Skipped ${dest} (already exists)`);
+    }
   }
 
   const packageJsonPath = join(cwd, 'package.json');
@@ -138,6 +166,8 @@ async function main(): Promise<void> {
 
     if (command === 'audit') {
       exitCode = await runAudit(args.slice(1));
+    } else if (command === 'review') {
+      exitCode = await runReview(args.slice(1));
     } else if (command === 'init') {
       exitCode = await runInit(args.slice(1));
     } else {

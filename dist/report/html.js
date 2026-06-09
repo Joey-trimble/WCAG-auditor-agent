@@ -57,6 +57,9 @@ function renderFinding(f) {
         <dt><strong>Route</strong></dt><dd>${escapeHtml(f.route)} (${escapeHtml(f.variant)})</dd>
         <dt><strong>Selector</strong></dt><dd><code>${escapeHtml(f.selector)}</code></dd>
         <dt><strong>W3C references</strong></dt><dd>${renderW3cLinks(f)}</dd>
+        ${f.guidance
+        ? `<dt><strong>How to fix</strong></dt><dd>${escapeHtml(f.guidance.howToFix)}${f.guidance.techniques.length ? `<br><span style="color:#6a7075">Techniques: ${escapeHtml(f.guidance.techniques.join(', '))}</span>` : ''}</dd>`
+        : ''}
       </dl>
     </article>`;
 }
@@ -64,10 +67,13 @@ function renderChecklistItem(item) {
     const newBadge = item.introducedIn === '2.2'
         ? ' <span style="font-size:11px;color:#1565c0">(WCAG 2.2)</span>'
         : '';
+    const guidanceHint = item.guidance
+        ? `<br><span style="color:#6a7075;font-size:12px">${escapeHtml(item.guidance.summary)}</span>`
+        : '';
     return `
     <tr>
       <td><code>${escapeHtml(item.id)}</code>${newBadge}</td>
-      <td>${escapeHtml(item.title)}</td>
+      <td>${escapeHtml(item.title)}${guidanceHint}</td>
       <td>${escapeHtml(item.principle)}</td>
       <td>${statusBadge(item.status)}</td>
       <td style="white-space:nowrap">
@@ -161,6 +167,11 @@ function writeHtmlReport(report, outputPath) {
       </table>
     </section>`
         : ''}
+
+    <section>
+      <h2>Agent review brief</h2>
+      <p class="note">Open <code>a11y-reports/agent-review.md</code> in Cursor for an AI-ready remediation brief with W3C guidance per criterion. Regenerate with <code>npx a11y-auditor review</code>.</p>
+    </section>
 
     ${report.behavioralAudit
         ? `<section>

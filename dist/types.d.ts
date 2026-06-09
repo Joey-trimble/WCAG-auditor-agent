@@ -51,6 +51,12 @@ export type W3cLinks = {
     understanding: string;
     quickRef: string;
 };
+export type CriterionGuidance = {
+    summary: string;
+    howToTest: string;
+    howToFix: string;
+    techniques: string[];
+};
 export type ChecklistStatus = 'failed' | 'incomplete' | 'automated-pass' | 'needs-manual-review';
 export type ChecklistItem = {
     id: string;
@@ -62,6 +68,7 @@ export type ChecklistItem = {
     introducedIn?: WcagVersion;
     w3c: W3cLinks;
     findingCount: number;
+    guidance?: CriterionGuidance;
 };
 export type ChecklistSummary = {
     total: number;
@@ -93,6 +100,7 @@ export type AuditFinding = {
     source: 'axe' | 'keyboard' | 'behavioral';
     criterionTitle?: string;
     w3c?: W3cLinks;
+    guidance?: CriterionGuidance;
 };
 export type RouteResult = {
     path: string;

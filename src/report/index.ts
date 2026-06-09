@@ -2,6 +2,7 @@ import { resolve } from 'path';
 import type { AuditReport, AuditorConfig } from '../types';
 import { writeJsonReport } from './json';
 import { writeHtmlReport } from './html';
+import { writeAgentReviewBrief } from './review';
 
 export async function writeReports(report: AuditReport, config: AuditorConfig, cwd: string): Promise<string[]> {
   const outputDir = resolve(cwd, config.output?.dir ?? './a11y-reports');
@@ -20,8 +21,14 @@ export async function writeReports(report: AuditReport, config: AuditorConfig, c
     written.push(htmlPath);
   }
 
+  const reviewPath = resolve(outputDir, 'agent-review.md');
+  writeAgentReviewBrief(report, reviewPath);
+  written.push(reviewPath);
+
   return written;
 }
 
 export { writeJsonReport } from './json';
 export { writeHtmlReport } from './html';
+export { writeAgentReviewBrief } from './review';
+export { generateAgentReviewBrief } from '../agent/review-brief';

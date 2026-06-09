@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getReportW3cReferences = exports.buildW3cLinks = exports.enrichFinding = exports.enrichFindings = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.extractNavSignature = exports.runCrossPageChecks = exports.runBehavioralChecks = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
+exports.getReportW3cReferences = exports.buildW3cLinks = exports.generateAgentReviewBrief = exports.getPlaybookExport = exports.getPlaybookEntry = exports.enrichChecklist = exports.enrichFinding = exports.enrichFindings = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.extractNavSignature = exports.runCrossPageChecks = exports.runBehavioralChecks = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
 var audit_1 = require("./audit");
 Object.defineProperty(exports, "audit", { enumerable: true, get: function () { return audit_1.audit; } });
 Object.defineProperty(exports, "auditUrl", { enumerable: true, get: function () { return audit_1.auditUrl; } });
@@ -28,6 +28,12 @@ Object.defineProperty(exports, "WCAG_22_CRITERIA", { enumerable: true, get: func
 var enrich_1 = require("./wcag/enrich");
 Object.defineProperty(exports, "enrichFindings", { enumerable: true, get: function () { return enrich_1.enrichFindings; } });
 Object.defineProperty(exports, "enrichFinding", { enumerable: true, get: function () { return enrich_1.enrichFinding; } });
+Object.defineProperty(exports, "enrichChecklist", { enumerable: true, get: function () { return enrich_1.enrichChecklist; } });
+var playbook_1 = require("./wcag/playbook");
+Object.defineProperty(exports, "getPlaybookEntry", { enumerable: true, get: function () { return playbook_1.getPlaybookEntry; } });
+Object.defineProperty(exports, "getPlaybookExport", { enumerable: true, get: function () { return playbook_1.getPlaybookExport; } });
+var review_brief_1 = require("./agent/review-brief");
+Object.defineProperty(exports, "generateAgentReviewBrief", { enumerable: true, get: function () { return review_brief_1.generateAgentReviewBrief; } });
 var urls_1 = require("./wcag/urls");
 Object.defineProperty(exports, "buildW3cLinks", { enumerable: true, get: function () { return urls_1.buildW3cLinks; } });
 Object.defineProperty(exports, "getReportW3cReferences", { enumerable: true, get: function () { return urls_1.getReportW3cReferences; } });

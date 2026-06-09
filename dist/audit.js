@@ -12,7 +12,7 @@ const variants_1 = require("./scanner/variants");
 const checklist_1 = require("./wcag/checklist");
 const enrich_1 = require("./wcag/enrich");
 const urls_1 = require("./wcag/urls");
-const PACKAGE_VERSION = '1.2.0';
+const PACKAGE_VERSION = '1.3.0';
 function buildUrl(baseUrl, path) {
     const base = baseUrl.replace(/\/$/, '');
     const route = path.startsWith('/') ? path : `/${path}`;
@@ -183,7 +183,7 @@ async function audit(config) {
     for (const finding of violations) {
         byImpact[finding.impact]++;
     }
-    const wcagChecklist = (0, checklist_1.buildWcagChecklist)(config, enrichedFindings, passedCriteria);
+    const wcagChecklist = (0, enrich_1.enrichChecklist)((0, checklist_1.buildWcagChecklist)(config, enrichedFindings, passedCriteria));
     const report = {
         meta: {
             tool: 'a11y-auditor-agent',

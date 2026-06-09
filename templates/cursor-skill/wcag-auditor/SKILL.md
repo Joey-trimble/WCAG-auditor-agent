@@ -1,6 +1,6 @@
 ---
 name: wcag-auditor
-description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpret findings, and suggest fixes mapped to W3C success criteria. Use when auditing pages, reviewing a11y reports, or fixing accessibility violations.
+description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpret findings, and suggest fixes mapped to W3C success criteria. Use when auditing pages, reviewing a11y reports, agent-review.md, or fixing accessibility violations.
 ---
 
 # WCAG Auditor
@@ -11,75 +11,53 @@ description: Run WCAG 2.2 accessibility audits using a11y-auditor-agent, interpr
 - [How to Meet WCAG 2 — Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/) — criteria, techniques, failures
 - [Understanding WCAG 2.2](https://www.w3.org/WAI/WCAG22/Understanding/) — detailed guidance per criterion
 
-## When to use
+## Phase 3 — Agent review workflow (preferred)
 
-- User asks for an accessibility audit or WCAG review
-- User references `a11y-reports/report.json` or `report.html`
-- PR review includes accessibility concerns
-
-## Workflow
-
-1. **Run the audit** (if no recent report exists):
+1. **Run audit** (if no recent report):
    ```bash
    npx a11y-auditor audit
    ```
-   Ensure the app is running at `baseUrl` from `a11y-auditor.config.ts`.
 
-2. **Read the report** from `./a11y-reports/report.json`.
+2. **Open the agent brief** — primary input for remediation:
+   ```
+   a11y-reports/agent-review.md
+   ```
+   Regenerate without re-scanning: `npx a11y-auditor review`
 
-3. **Review coverage first** — check `wcagChecklist` and `checklistSummary`:
-   - `failed` — automated violations; fix immediately
-   - `incomplete` — axe could not decide; investigate manually
-   - `automated-pass` — axe passed rules for this criterion (not full conformance)
-   - `needs-manual-review` — no automated test; human must verify using W3C Understanding docs
+3. **Read reference.md** in this skill folder for fix format and technique prefixes.
 
-4. **Review behavioral checks** — see `behavioralAudit.passedChecks` and behavioral findings (`source: "behavioral"`):
-   - Page title (2.4.2), lang (3.1.1), landmarks, skip links, reflow, target size, consistent nav
-   - See [docs/behavioral-checks.md](https://github.com/Joey-trimble/WCAG-auditor-agent/blob/main/docs/behavioral-checks.md)
+4. **For each criterion in the brief**, use:
+   - `guidance.summary`, `guidance.howToTest`, `guidance.howToFix`
+   - `guidance.techniques` (W3C technique IDs)
+   - `w3c.understanding` link for authoritative detail
 
-5. **Triage findings** in this order:
-   - `critical` and `serious` violations
-   - `incomplete` axe items
-   - Behavioral findings flagged `needsManualReview`
-   - `wcagChecklist` items with `needs-manual-review`
-   - Keyboard audit issues from `keyboardAudit.issues`
+5. **Propose concrete code fixes** in the consumer's codebase with file paths and selectors from the brief.
 
-6. **For each finding**, provide:
-   - WCAG success criteria and `criterionTitle`
-   - W3C links: `finding.w3c.understanding` and `finding.w3c.quickRef`
-   - Impact and rule ID
-   - Element selector and route/variant
-   - Concrete code fix in the consumer's codebase
-   - Axe rule link (`finding.helpUrl`) for technical detail
+## Fallback: raw JSON report
 
-7. **Manual review items** (`needsManualReview: true` or checklist `needs-manual-review`):
-   - Link to the W3C Understanding document for that criterion
-   - State what a human must verify (e.g. alt text meaning, error recovery)
-   - Do not mark as "fixed" without evidence
+If `agent-review.md` is missing, read `./a11y-reports/report.json` and apply the same workflow using `findings[].guidance` and `wcagChecklist[].guidance`.
 
-## Report output template
+## Triage order
+
+1. `critical` and `serious` violations
+2. Failed criteria from `wcagChecklist`
+3. `incomplete` axe items
+4. Behavioral findings with `needsManualReview`
+5. `needs-manual-review` checklist items — verification steps, not blind fixes
+
+## Per-fix output format
 
 ```markdown
-## Accessibility audit summary
-
-**Status:** PASSED / FAILED
-**WCAG:** 2.2 AA
-**Violations:** N (critical: X, serious: Y)
-**Criteria coverage:** X failed, Y incomplete, Z need manual review (of 50 total)
-
-### Top issues
-1. [Impact] Summary — WCAG X.X.X Title — `selector` — [Understanding](url) — suggested fix
-
-### Manual review queue (from checklist)
-- 1.2.2 Captions — no automated test — verify prerecorded video has captions
-
-### Keyboard
-- Focus order notes
+### WCAG X.X.X Title
+- **Element:** `selector` on `route`
+- **Problem:** ...
+- **Fix:** [specific code change]
+- **Verify:** keyboard + screen reader step
+- **W3C:** [Understanding](url) · Techniques: H37, G18
 ```
 
 ## Limitations
 
-- Automated scans catch a subset of WCAG issues; `wcagChecklist` shows the full gap.
-- Shadow DOM / web components may need source-level review beyond axe selectors.
-- `automated-pass` means axe passed related rules, not guaranteed full SC conformance.
-- This is an engineering aid, not a legal compliance certification.
+- `guidance` is curated engineering aid — confirm against W3C for compliance decisions
+- Shadow DOM / web components may need source-level review
+- Not a legal compliance certification

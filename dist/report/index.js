@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.writeHtmlReport = exports.writeJsonReport = void 0;
+exports.generateAgentReviewBrief = exports.writeAgentReviewBrief = exports.writeHtmlReport = exports.writeJsonReport = void 0;
 exports.writeReports = writeReports;
 const path_1 = require("path");
 const json_1 = require("./json");
 const html_1 = require("./html");
+const review_1 = require("./review");
 async function writeReports(report, config, cwd) {
     const outputDir = (0, path_1.resolve)(cwd, config.output?.dir ?? './a11y-reports');
     const formats = config.output?.formats ?? ['json', 'html'];
@@ -19,10 +20,17 @@ async function writeReports(report, config, cwd) {
         (0, html_1.writeHtmlReport)(report, htmlPath);
         written.push(htmlPath);
     }
+    const reviewPath = (0, path_1.resolve)(outputDir, 'agent-review.md');
+    (0, review_1.writeAgentReviewBrief)(report, reviewPath);
+    written.push(reviewPath);
     return written;
 }
 var json_2 = require("./json");
 Object.defineProperty(exports, "writeJsonReport", { enumerable: true, get: function () { return json_2.writeJsonReport; } });
 var html_2 = require("./html");
 Object.defineProperty(exports, "writeHtmlReport", { enumerable: true, get: function () { return html_2.writeHtmlReport; } });
+var review_2 = require("./review");
+Object.defineProperty(exports, "writeAgentReviewBrief", { enumerable: true, get: function () { return review_2.writeAgentReviewBrief; } });
+var review_brief_1 = require("../agent/review-brief");
+Object.defineProperty(exports, "generateAgentReviewBrief", { enumerable: true, get: function () { return review_brief_1.generateAgentReviewBrief; } });
 //# sourceMappingURL=index.js.map
