@@ -4,6 +4,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   a11y-audit:
     runs-on: ubuntu-latest
@@ -35,6 +39,13 @@ jobs:
         run: npx a11y-auditor audit
         env:
           APP_URL: http://localhost:4173
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: a11y-reports/report.sarif
+          category: accessibility
 
       - name: Upload audit reports
         if: always()

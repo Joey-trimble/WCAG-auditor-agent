@@ -124,13 +124,13 @@ function validateConfig(config: AuditorConfig): void {
 }
 
 export function evaluateThresholds(
-  report: { findings: { impact: Impact; needsManualReview: boolean }[] },
+  report: { findings: { impact: Impact; needsManualReview: boolean; waived?: boolean }[] },
   config: AuditorConfig,
 ): boolean {
   const failOn = new Set(config.thresholds?.failOn ?? ['critical', 'serious']);
   const maxViolations = config.thresholds?.maxViolations ?? 0;
 
-  const violations = report.findings.filter((f) => !f.needsManualReview);
+  const violations = report.findings.filter((f) => !f.needsManualReview && !f.waived);
   const failing = violations.filter((f) => failOn.has(f.impact));
 
   if (failing.length > maxViolations) {

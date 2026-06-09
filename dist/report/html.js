@@ -49,6 +49,7 @@ function renderFinding(f) {
         ${impactBadge(f.impact)}
         <strong>${escapeHtml(f.summary)}</strong>
         ${f.needsManualReview ? '<span style="color:#6a1b9a">Manual review</span>' : ''}
+        ${f.waived ? '<span style="color:#1565c0">Waived</span>' : ''}
       </header>
       <p style="color:#555;margin:0 0 8px">${escapeHtml(f.description)}</p>
       <dl style="margin:0;font-size:14px">
@@ -131,6 +132,7 @@ function writeHtmlReport(report, outputPath) {
       <div class="card"><span>Manual review (axe)</span><strong>${report.summary.incomplete}</strong></div>
       <div class="card"><span>Critical</span><strong>${report.summary.byImpact.critical}</strong></div>
       <div class="card"><span>Serious</span><strong>${report.summary.byImpact.serious}</strong></div>
+      <div class="card"><span>Waived</span><strong>${report.summary.waived ?? 0}</strong></div>
       ${checklistSummary
         ? `<div class="card"><span>Criteria needing manual review</span><strong>${checklistSummary.needsManualReview}</strong></div>`
         : ''}
@@ -165,6 +167,14 @@ function writeHtmlReport(report, outputPath) {
           ${checklist.map(renderChecklistItem).join('')}
         </tbody>
       </table>
+    </section>`
+        : ''}
+
+    ${report.waivers?.expired.length
+        ? `<section>
+      <h2>Expired waivers (${report.waivers.expired.length})</h2>
+      <p class="note" style="border-left-color:#e65100">These waivers have expired and no longer suppress findings. Renew or fix the underlying issues.</p>
+      <ul>${report.waivers.expired.map((w) => `<li><strong>${escapeHtml(w.id)}</strong> — ${escapeHtml(w.reason)} (expired ${escapeHtml(w.expires)}, owner: ${escapeHtml(w.owner)})</li>`).join('')}</ul>
     </section>`
         : ''}
 

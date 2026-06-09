@@ -12,10 +12,11 @@ import {
 import { runKeyboardAudit } from './scanner/keyboard';
 import { applyVariant } from './scanner/variants';
 import { buildWcagChecklist, summarizeChecklist } from './wcag/checklist';
+import { applyWaivers, getActiveWaivers, getExpiredWaivers, loadWaivers } from './waivers';
 import { enrichChecklist, enrichFindings } from './wcag/enrich';
 import { getReportW3cReferences } from './wcag/urls';
 
-const PACKAGE_VERSION = '1.3.0';
+const PACKAGE_VERSION = '1.4.0';
 
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/$/, '');
@@ -211,8 +212,12 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
     await browser.close();
   }
 
-  const enrichedFindings = enrichFindings(allFindings, config.wcag.version);
-  const violations = enrichedFindings.filter((f) => !f.needsManualReview);
+  const cwd = process.cwd();
+  const waiverEntries = loadWaivers(cwd, config);
+  const enrichedFindings = applyWaivers(enrichFindings(allFindings, config.wcag.version), waiverEntries);
+
+  const violations = enrichedFindings.filter((f) => !f.needsManualReview && !f.waived);
+  const waived = enrichedFindings.filter((f) => f.waived);
   const incomplete = enrichedFindings.filter((f) => f.needsManualReview);
 
   const byImpact: Record<Impact, number> = {
@@ -242,8 +247,15 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
       incomplete: incomplete.length,
       passes: totalPasses,
       byImpact,
+      waived: waived.length,
       passed: false,
     },
+    waivers: waiverEntries.length
+      ? {
+          active: getActiveWaivers(waiverEntries),
+          expired: getExpiredWaivers(waiverEntries),
+        }
+      : undefined,
     findings: enrichedFindings,
     routes: routeResults,
     keyboardAudit: {

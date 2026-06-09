@@ -10,9 +10,10 @@ const behavioral_1 = require("./scanner/behavioral");
 const keyboard_1 = require("./scanner/keyboard");
 const variants_1 = require("./scanner/variants");
 const checklist_1 = require("./wcag/checklist");
+const waivers_1 = require("./waivers");
 const enrich_1 = require("./wcag/enrich");
 const urls_1 = require("./wcag/urls");
-const PACKAGE_VERSION = '1.3.0';
+const PACKAGE_VERSION = '1.4.0';
 function buildUrl(baseUrl, path) {
     const base = baseUrl.replace(/\/$/, '');
     const route = path.startsWith('/') ? path : `/${path}`;
@@ -171,8 +172,11 @@ async function audit(config) {
     finally {
         await browser.close();
     }
-    const enrichedFindings = (0, enrich_1.enrichFindings)(allFindings, config.wcag.version);
-    const violations = enrichedFindings.filter((f) => !f.needsManualReview);
+    const cwd = process.cwd();
+    const waiverEntries = (0, waivers_1.loadWaivers)(cwd, config);
+    const enrichedFindings = (0, waivers_1.applyWaivers)((0, enrich_1.enrichFindings)(allFindings, config.wcag.version), waiverEntries);
+    const violations = enrichedFindings.filter((f) => !f.needsManualReview && !f.waived);
+    const waived = enrichedFindings.filter((f) => f.waived);
     const incomplete = enrichedFindings.filter((f) => f.needsManualReview);
     const byImpact = {
         critical: 0,
@@ -198,8 +202,15 @@ async function audit(config) {
             incomplete: incomplete.length,
             passes: totalPasses,
             byImpact,
+            waived: waived.length,
             passed: false,
         },
+        waivers: waiverEntries.length
+            ? {
+                active: (0, waivers_1.getActiveWaivers)(waiverEntries),
+                expired: (0, waivers_1.getExpiredWaivers)(waiverEntries),
+            }
+            : undefined,
         findings: enrichedFindings,
         routes: routeResults,
         keyboardAudit: {

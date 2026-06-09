@@ -7,6 +7,7 @@ export declare function evaluateThresholds(report: {
     findings: {
         impact: Impact;
         needsManualReview: boolean;
+        waived?: boolean;
     }[];
 }, config: AuditorConfig): boolean;
 export declare const DEFAULT_VARIANTS: PageVariant[];

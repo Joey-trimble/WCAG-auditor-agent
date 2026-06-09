@@ -47,6 +47,7 @@ async function runAudit(args: string[]): Promise<number> {
   console.log(`
 Summary:
   Violations:     ${report.summary.violations}
+  Waived:         ${report.summary.waived ?? 0}
   Manual review:  ${report.summary.incomplete}
   Critical:       ${report.summary.byImpact.critical}
   Serious:        ${report.summary.byImpact.serious}
@@ -87,6 +88,14 @@ async function runInit(args: string[]): Promise<number> {
     console.log(`Created ${configDest}`);
   } else {
     console.log(`Skipped ${configDest} (already exists)`);
+  }
+
+  const waiversDest = join(cwd, 'a11y-waivers.json');
+  if (!existsSync(waiversDest)) {
+    copyFileSync(join(templatesDir, 'a11y-waivers.example.json'), waiversDest);
+    console.log(`Created ${waiversDest}`);
+  } else {
+    console.log(`Skipped ${waiversDest} (already exists)`);
   }
 
   const ghDir = join(cwd, '.github', 'workflows');

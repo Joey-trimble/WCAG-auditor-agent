@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateAgentReviewBrief = exports.writeAgentReviewBrief = exports.writeHtmlReport = exports.writeJsonReport = void 0;
+exports.buildSarifReport = exports.writeSarifReport = exports.generateAgentReviewBrief = exports.writeAgentReviewBrief = exports.writeHtmlReport = exports.writeJsonReport = void 0;
 exports.writeReports = writeReports;
 const path_1 = require("path");
 const json_1 = require("./json");
 const html_1 = require("./html");
 const review_1 = require("./review");
+const sarif_1 = require("./sarif");
 async function writeReports(report, config, cwd) {
     const outputDir = (0, path_1.resolve)(cwd, config.output?.dir ?? './a11y-reports');
     const formats = config.output?.formats ?? ['json', 'html'];
@@ -20,6 +21,11 @@ async function writeReports(report, config, cwd) {
         (0, html_1.writeHtmlReport)(report, htmlPath);
         written.push(htmlPath);
     }
+    if (formats.includes('sarif')) {
+        const sarifPath = (0, path_1.resolve)(outputDir, 'report.sarif');
+        (0, sarif_1.writeSarifReport)(report, sarifPath);
+        written.push(sarifPath);
+    }
     const reviewPath = (0, path_1.resolve)(outputDir, 'agent-review.md');
     (0, review_1.writeAgentReviewBrief)(report, reviewPath);
     written.push(reviewPath);
@@ -33,4 +39,7 @@ var review_2 = require("./review");
 Object.defineProperty(exports, "writeAgentReviewBrief", { enumerable: true, get: function () { return review_2.writeAgentReviewBrief; } });
 var review_brief_1 = require("../agent/review-brief");
 Object.defineProperty(exports, "generateAgentReviewBrief", { enumerable: true, get: function () { return review_brief_1.generateAgentReviewBrief; } });
+var sarif_2 = require("./sarif");
+Object.defineProperty(exports, "writeSarifReport", { enumerable: true, get: function () { return sarif_2.writeSarifReport; } });
+Object.defineProperty(exports, "buildSarifReport", { enumerable: true, get: function () { return sarif_2.buildSarifReport; } });
 //# sourceMappingURL=index.js.map

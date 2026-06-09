@@ -6,3 +6,4 @@ a11y-reports/
 # Local dogfood config (teams create their own via init)
 a11y-auditor.config.json
 a11y-auditor.config.ts
+a11y-waivers.json

@@ -41,6 +41,7 @@ async function runAudit(args) {
     console.log(`
 Summary:
   Violations:     ${report.summary.violations}
+  Waived:         ${report.summary.waived ?? 0}
   Manual review:  ${report.summary.incomplete}
   Critical:       ${report.summary.byImpact.critical}
   Serious:        ${report.summary.byImpact.serious}
@@ -75,6 +76,14 @@ async function runInit(args) {
     }
     else {
         console.log(`Skipped ${configDest} (already exists)`);
+    }
+    const waiversDest = (0, path_1.join)(cwd, 'a11y-waivers.json');
+    if (!(0, fs_1.existsSync)(waiversDest)) {
+        (0, fs_1.copyFileSync)((0, path_1.join)(templatesDir, 'a11y-waivers.example.json'), waiversDest);
+        console.log(`Created ${waiversDest}`);
+    }
+    else {
+        console.log(`Skipped ${waiversDest} (already exists)`);
     }
     const ghDir = (0, path_1.join)(cwd, '.github', 'workflows');
     (0, fs_1.mkdirSync)(ghDir, { recursive: true });

@@ -1,0 +1,14 @@
+{
+  "waivers": [
+    {
+      "id": "WAIVER-001",
+      "rule": "color-contrast",
+      "criteria": ["1.4.3"],
+      "route": "/legacy-page",
+      "selector": ".legacy-banner",
+      "reason": "Legacy marketing banner scheduled for redesign Q3; contrast documented with design.",
+      "owner": "team-name@example.com",
+      "expires": "2026-12-31"
+    }
+  ]
+}

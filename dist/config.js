@@ -147,7 +147,7 @@ function validateConfig(config) {
 function evaluateThresholds(report, config) {
     const failOn = new Set(config.thresholds?.failOn ?? ['critical', 'serious']);
     const maxViolations = config.thresholds?.maxViolations ?? 0;
-    const violations = report.findings.filter((f) => !f.needsManualReview);
+    const violations = report.findings.filter((f) => !f.needsManualReview && !f.waived);
     const failing = violations.filter((f) => failOn.has(f.impact));
     if (failing.length > maxViolations) {
         return false;

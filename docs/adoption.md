@@ -66,6 +66,12 @@ Open `a11y-reports/report.html` for the human-readable report. It includes:
 npx a11y-auditor review   # regenerate brief without re-scanning
 ```
 
+## Enterprise (Phase 4)
+
+- **SARIF:** add `'sarif'` to `output.formats` for GitHub Code Scanning
+- **Waivers:** `a11y-waivers.json` — see [enterprise.md](./enterprise.md)
+- **Versions:** pin `github:Joey-trimble/WCAG-auditor-agent#v1.4.0`
+
 ## 5. CI
 
 The generated GitHub Action runs on pull requests. Customize:

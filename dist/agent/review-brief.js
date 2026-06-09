@@ -98,6 +98,7 @@ You are reviewing accessibility audit results. For each issue:
 | Incomplete (axe) | ${summary.incomplete} |
 | Critical | ${summary.byImpact.critical} |
 | Serious | ${summary.byImpact.serious} |
+| Waived | ${summary.waived ?? 0} |
 ${checklistSummary ? `| Criteria failed | ${checklistSummary.failed} |\n| Criteria need manual review | ${checklistSummary.needsManualReview} |` : ''}
 
 ### Top violations

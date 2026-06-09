@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getReportW3cReferences = exports.buildW3cLinks = exports.generateAgentReviewBrief = exports.getPlaybookExport = exports.getPlaybookEntry = exports.enrichChecklist = exports.enrichFinding = exports.enrichFindings = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.extractNavSignature = exports.runCrossPageChecks = exports.runBehavioralChecks = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
+exports.getReportW3cReferences = exports.buildW3cLinks = exports.buildSarifReport = exports.writeSarifReport = exports.getExpiredWaivers = exports.getActiveWaivers = exports.applyWaivers = exports.loadWaivers = exports.generateAgentReviewBrief = exports.getPlaybookExport = exports.getPlaybookEntry = exports.enrichChecklist = exports.enrichFinding = exports.enrichFindings = exports.WCAG_22_CRITERIA = exports.getCriterion = exports.getCriteriaForTarget = exports.summarizeChecklist = exports.buildWcagChecklist = exports.extractNavSignature = exports.runCrossPageChecks = exports.runBehavioralChecks = exports.writeHtmlReport = exports.writeJsonReport = exports.writeReports = exports.findConfigPath = exports.evaluateThresholds = exports.getWcagTags = exports.mergeConfig = exports.loadConfig = exports.auditUrl = exports.audit = void 0;
 var audit_1 = require("./audit");
 Object.defineProperty(exports, "audit", { enumerable: true, get: function () { return audit_1.audit; } });
 Object.defineProperty(exports, "auditUrl", { enumerable: true, get: function () { return audit_1.auditUrl; } });
@@ -34,6 +34,14 @@ Object.defineProperty(exports, "getPlaybookEntry", { enumerable: true, get: func
 Object.defineProperty(exports, "getPlaybookExport", { enumerable: true, get: function () { return playbook_1.getPlaybookExport; } });
 var review_brief_1 = require("./agent/review-brief");
 Object.defineProperty(exports, "generateAgentReviewBrief", { enumerable: true, get: function () { return review_brief_1.generateAgentReviewBrief; } });
+var waivers_1 = require("./waivers");
+Object.defineProperty(exports, "loadWaivers", { enumerable: true, get: function () { return waivers_1.loadWaivers; } });
+Object.defineProperty(exports, "applyWaivers", { enumerable: true, get: function () { return waivers_1.applyWaivers; } });
+Object.defineProperty(exports, "getActiveWaivers", { enumerable: true, get: function () { return waivers_1.getActiveWaivers; } });
+Object.defineProperty(exports, "getExpiredWaivers", { enumerable: true, get: function () { return waivers_1.getExpiredWaivers; } });
+var sarif_1 = require("./report/sarif");
+Object.defineProperty(exports, "writeSarifReport", { enumerable: true, get: function () { return sarif_1.writeSarifReport; } });
+Object.defineProperty(exports, "buildSarifReport", { enumerable: true, get: function () { return sarif_1.buildSarifReport; } });
 var urls_1 = require("./wcag/urls");
 Object.defineProperty(exports, "buildW3cLinks", { enumerable: true, get: function () { return urls_1.buildW3cLinks; } });
 Object.defineProperty(exports, "getReportW3cReferences", { enumerable: true, get: function () { return urls_1.getReportW3cReferences; } });

@@ -1,7 +1,7 @@
 export type WcagLevel = 'A' | 'AA' | 'AAA';
 export type WcagVersion = '2.1' | '2.2';
 export type Impact = 'critical' | 'serious' | 'moderate' | 'minor';
-export type ReportFormat = 'json' | 'html';
+export type ReportFormat = 'json' | 'html' | 'sarif';
 export type PageVariant = 'default' | 'dark' | 'zoom-200' | 'reduced-motion';
 export type RouteConfig = {
     path: string;
@@ -45,6 +45,19 @@ export type AuditorConfig = {
     behavioral?: {
         enabled?: boolean;
     };
+    waivers?: {
+        file?: string;
+    };
+};
+export type WaiverEntry = {
+    id: string;
+    rule?: string;
+    criteria?: string[];
+    selector?: string;
+    route?: string;
+    reason: string;
+    owner: string;
+    expires: string;
 };
 export type W3cLinks = {
     overview: string;
@@ -101,6 +114,9 @@ export type AuditFinding = {
     criterionTitle?: string;
     w3c?: W3cLinks;
     guidance?: CriterionGuidance;
+    waived?: boolean;
+    waiverId?: string;
+    waiverReason?: string;
 };
 export type RouteResult = {
     path: string;
@@ -129,7 +145,12 @@ export type AuditReport = {
         incomplete: number;
         passes: number;
         byImpact: Record<Impact, number>;
+        waived: number;
         passed: boolean;
+    };
+    waivers?: {
+        active: WaiverEntry[];
+        expired: WaiverEntry[];
     };
     findings: AuditFinding[];
     routes: RouteResult[];

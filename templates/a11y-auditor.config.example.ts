@@ -49,8 +49,10 @@ const config: AuditorConfig = {
 
   output: {
     dir: './a11y-reports',
-    formats: ['json', 'html'],
+    formats: ['json', 'html', 'sarif'],
   },
+
+  // waivers: { file: './a11y-waivers.json' },
 };
 
 export default config;

@@ -3,6 +3,7 @@ import type { AuditReport, AuditorConfig } from '../types';
 import { writeJsonReport } from './json';
 import { writeHtmlReport } from './html';
 import { writeAgentReviewBrief } from './review';
+import { writeSarifReport } from './sarif';
 
 export async function writeReports(report: AuditReport, config: AuditorConfig, cwd: string): Promise<string[]> {
   const outputDir = resolve(cwd, config.output?.dir ?? './a11y-reports');
@@ -21,6 +22,12 @@ export async function writeReports(report: AuditReport, config: AuditorConfig, c
     written.push(htmlPath);
   }
 
+  if (formats.includes('sarif')) {
+    const sarifPath = resolve(outputDir, 'report.sarif');
+    writeSarifReport(report, sarifPath);
+    written.push(sarifPath);
+  }
+
   const reviewPath = resolve(outputDir, 'agent-review.md');
   writeAgentReviewBrief(report, reviewPath);
   written.push(reviewPath);
@@ -32,3 +39,4 @@ export { writeJsonReport } from './json';
 export { writeHtmlReport } from './html';
 export { writeAgentReviewBrief } from './review';
 export { generateAgentReviewBrief } from '../agent/review-brief';
+export { writeSarifReport, buildSarifReport } from './sarif';
