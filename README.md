@@ -1,4 +1,4 @@
-# a11y-auditor-agent
+# WCAG-auditor-agent
 
 Reusable **WCAG 2.2** accessibility auditor for teams. Combines **axe-core** automated rules, **keyboard/focus** checks, and a **Cursor agent skill** for interpretation and fixes.
 
