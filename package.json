@@ -1,0 +1,57 @@
+{
+  "name": "a11y-auditor-agent",
+  "version": "1.0.0",
+  "description": "Reusable WCAG 2.2 accessibility auditor with CLI, reports, and Cursor agent skill",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "a11y-auditor": "./bin/a11y-auditor.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "templates",
+    "docs/adoption.md",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_ORG/a11y-auditor-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YOUR_ORG/a11y-auditor-agent/issues"
+  },
+  "homepage": "https://github.com/YOUR_ORG/a11y-auditor-agent#readme",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build",
+    "a11y:audit": "node bin/a11y-auditor.js audit",
+    "init": "node bin/a11y-auditor.js init"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "axe",
+    "playwright",
+    "auditor"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.11.3",
+    "@playwright/test": "^1.60.0",
+    "dotenv": "^17.4.2",
+    "jiti": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "axe-core": "^4.11.0",
+    "typescript": "^6.0.3"
+  }
+}

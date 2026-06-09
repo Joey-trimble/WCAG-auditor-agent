@@ -1,0 +1,177 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.audit = audit;
+exports.auditUrl = auditUrl;
+const test_1 = require("@playwright/test");
+const path_1 = require("path");
+const config_1 = require("./config");
+const axe_1 = require("./scanner/axe");
+const keyboard_1 = require("./scanner/keyboard");
+const variants_1 = require("./scanner/variants");
+const PACKAGE_VERSION = '1.0.0';
+function buildUrl(baseUrl, path) {
+    const base = baseUrl.replace(/\/$/, '');
+    const route = path.startsWith('/') ? path : `/${path}`;
+    return `${base}${route}`;
+}
+async function applyScenarioSteps(page, steps) {
+    for (const step of steps) {
+        const clickMatch = step.match(/^click\s+(.+)$/i);
+        if (clickMatch) {
+            await page.locator(clickMatch[1].trim()).click();
+            await page.waitForTimeout(300);
+            continue;
+        }
+        const typeMatch = step.match(/^type\s+(.+?)\s+into\s+(.+)$/i);
+        if (typeMatch) {
+            await page.locator(typeMatch[2].trim()).fill(typeMatch[1].trim());
+            continue;
+        }
+        const waitMatch = step.match(/^wait\s+(\d+)ms$/i);
+        if (waitMatch) {
+            await page.waitForTimeout(Number(waitMatch[1]));
+            continue;
+        }
+        throw new Error(`Unsupported scenario step: "${step}". Supported: click <selector>, type <text> into <selector>, wait <n>ms`);
+    }
+}
+async function createPage(browser, config, authProfile) {
+    const contextOptions = {};
+    if (authProfile && config.auth?.profiles[authProfile]) {
+        const profile = config.auth.profiles[authProfile];
+        contextOptions.storageState = (0, path_1.resolve)(process.cwd(), profile.storageState);
+    }
+    const context = await browser.newContext(contextOptions);
+    return context.newPage();
+}
+async function audit(config) {
+    const browser = await test_1.chromium.launch({ headless: true });
+    const allFindings = [];
+    const routeResults = [];
+    let totalPasses = 0;
+    let keyboardFocusOrder = [];
+    let keyboardIssues = [];
+    const variants = config.variants ?? ['default'];
+    const scenarios = config.scenarios ?? [];
+    try {
+        for (const route of config.routes) {
+            for (const variant of variants) {
+                const url = buildUrl(config.baseUrl, route.path);
+                const page = await createPage(browser, config, route.auth);
+                try {
+                    await page.goto(url, { waitUntil: 'networkidle', timeout: 60_000 });
+                    await (0, variants_1.applyVariant)(page, variant);
+                    const ctx = {
+                        route: route.path,
+                        routeName: route.name,
+                        variant,
+                    };
+                    const axeFindings = await (0, axe_1.runAxeScan)(page, config, ctx);
+                    allFindings.push(...axeFindings);
+                    const passCount = await (0, axe_1.countAxePasses)(page, config);
+                    totalPasses += passCount;
+                    if (variant === 'default') {
+                        const keyboard = await (0, keyboard_1.runKeyboardAudit)(page, config, ctx);
+                        allFindings.push(...keyboard.findings);
+                        keyboardFocusOrder = keyboard.focusOrder;
+                        keyboardIssues = keyboard.issues;
+                    }
+                    routeResults.push({
+                        path: route.path,
+                        name: route.name,
+                        url,
+                        variant,
+                        violationCount: axeFindings.filter((f) => !f.needsManualReview).length,
+                        incompleteCount: axeFindings.filter((f) => f.needsManualReview).length,
+                        passCount,
+                    });
+                    for (const scenario of scenarios.filter((s) => s.route === route.path)) {
+                        const scenarioPage = await createPage(browser, config, scenario.auth ?? route.auth);
+                        try {
+                            await scenarioPage.goto(url, { waitUntil: 'networkidle', timeout: 60_000 });
+                            await (0, variants_1.applyVariant)(scenarioPage, variant);
+                            await applyScenarioSteps(scenarioPage, scenario.steps);
+                            const scenarioCtx = { ...ctx, scenario: scenario.name };
+                            const scenarioFindings = await (0, axe_1.runAxeScan)(scenarioPage, config, scenarioCtx);
+                            allFindings.push(...scenarioFindings);
+                            routeResults.push({
+                                path: route.path,
+                                name: route.name,
+                                url,
+                                variant,
+                                scenario: scenario.name,
+                                violationCount: scenarioFindings.filter((f) => !f.needsManualReview).length,
+                                incompleteCount: scenarioFindings.filter((f) => f.needsManualReview).length,
+                                passCount: await (0, axe_1.countAxePasses)(scenarioPage, config),
+                            });
+                        }
+                        finally {
+                            await scenarioPage.context().close();
+                        }
+                    }
+                }
+                finally {
+                    await page.context().close();
+                }
+            }
+        }
+    }
+    finally {
+        await browser.close();
+    }
+    const violations = allFindings.filter((f) => !f.needsManualReview);
+    const incomplete = allFindings.filter((f) => f.needsManualReview);
+    const byImpact = {
+        critical: 0,
+        serious: 0,
+        moderate: 0,
+        minor: 0,
+    };
+    for (const finding of violations) {
+        byImpact[finding.impact]++;
+    }
+    const report = {
+        meta: {
+            tool: 'a11y-auditor-agent',
+            version: PACKAGE_VERSION,
+            wcag: config.wcag,
+            timestamp: new Date().toISOString(),
+            baseUrl: config.baseUrl,
+        },
+        summary: {
+            routesScanned: routeResults.length,
+            violations: violations.length,
+            incomplete: incomplete.length,
+            passes: totalPasses,
+            byImpact,
+            passed: false,
+        },
+        findings: allFindings,
+        routes: routeResults,
+        keyboardAudit: {
+            focusOrder: keyboardFocusOrder,
+            issues: keyboardIssues,
+        },
+    };
+    report.summary.passed = (0, config_1.evaluateThresholds)(report, config);
+    return report;
+}
+async function auditUrl(url, options = {}) {
+    const config = {
+        wcag: options.wcag ?? { version: '2.2', level: 'AA' },
+        baseUrl: url,
+        routes: options.routes ?? [{ path: '/', name: 'Page' }],
+        variants: options.variants ?? ['default'],
+        thresholds: options.thresholds ?? { failOn: ['critical', 'serious'], maxViolations: 0 },
+        output: options.output,
+        axe: options.axe,
+        auth: options.auth,
+        scenarios: options.scenarios,
+    };
+    // Override baseUrl handling for single URL
+    const parsed = new URL(url);
+    config.baseUrl = `${parsed.protocol}//${parsed.host}`;
+    config.routes = [{ path: parsed.pathname + parsed.search, name: 'Page' }];
+    return audit(config);
+}
+//# sourceMappingURL=audit.js.map

@@ -1,0 +1,8 @@
+node_modules/
+a11y-reports/
+*.log
+.DS_Store
+
+# Local dogfood config (teams create their own via init)
+a11y-auditor.config.json
+a11y-auditor.config.ts

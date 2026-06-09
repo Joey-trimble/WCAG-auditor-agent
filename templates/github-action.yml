@@ -1,0 +1,45 @@
+name: Accessibility audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  a11y-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on "${APP_URL:-http://localhost:4173}" -t 60000
+        env:
+          APP_URL: http://localhost:4173
+
+      - name: Run accessibility audit
+        run: npx a11y-auditor audit
+        env:
+          APP_URL: http://localhost:4173
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-reports
+          path: a11y-reports/
+          retention-days: 14
