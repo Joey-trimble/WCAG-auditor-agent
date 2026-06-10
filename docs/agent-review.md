@@ -35,6 +35,8 @@ npx a11y-auditor review --report ./a11y-reports/report.json
 ## What's in agent-review.md
 
 - Executive summary and top violations with **full hierarchy** per finding
+- Grouped violation patterns to fix once across multiple routes
+- Waived findings section (explicitly non-actionable until waiver expiry)
 - **Coverage by principle** table (Perceivable, Operable, Understandable, Robust)
 - **WCAG 2.2-only criteria** section with pass/fail status
 - **Priority fixes** grouped by failed WCAG criterion
@@ -49,6 +51,16 @@ Machine-readable export for AI agents:
 - `principles` — nested principle → guideline → criterion tree with status
 - `wcag22NewCriteria` — all WCAG 2.2-only criteria and their audit status
 - `topFindings` — priority violations with hierarchy and techniques
+
+## What's in report.html (triage order)
+
+1. Baseline delta (new, fixed, regressed)
+2. Grouped fix patterns (owner hint, effort, route risk, confidence, acceptance criteria)
+3. CI-blocking findings
+4. Static findings by file
+5. WCAG 2.2-only criteria
+6. Manual verification queue
+7. Waiver governance (expiring soon/30/60 day buckets)
 
 ## Playbook data
 

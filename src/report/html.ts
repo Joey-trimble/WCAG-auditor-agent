@@ -33,6 +33,16 @@ function statusBadge(status: ChecklistItem['status']): string {
   return `<span style="background:${style.bg};color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;white-space:nowrap">${style.label}</span>`;
 }
 
+function confidenceBadge(confidence: FindingGroup['confidence']): string {
+  const styles: Record<FindingGroup['confidence'], { bg: string; label: string }> = {
+    'high-confidence-automated': { bg: '#2e7d32', label: 'High-confidence automated' },
+    heuristic: { bg: '#ef6c00', label: 'Heuristic' },
+    'manual-required': { bg: '#6a1b9a', label: 'Manual required' },
+  };
+  const style = styles[confidence];
+  return `<span style="background:${style.bg};color:#fff;padding:2px 8px;border-radius:4px;font-size:12px">${style.label}</span>`;
+}
+
 function renderW3cLinks(f: AuditFinding): string {
   if (!f.w3c) {
     return `<a href="${escapeHtml(f.helpUrl)}" target="_blank" rel="noopener">Rule docs</a>`;
@@ -72,11 +82,6 @@ function renderFinding(f: AuditFinding, checklist: ChecklistItem[]): string {
         <dt><strong>Route</strong></dt><dd>${escapeHtml(f.route)} (${escapeHtml(f.variant)})</dd>
         <dt><strong>Selector</strong></dt><dd><code>${escapeHtml(f.selector)}</code></dd>
         <dt><strong>W3C references</strong></dt><dd>${renderW3cLinks(f)}</dd>
-        ${
-          f.guidance
-            ? `<dt><strong>How to fix</strong></dt><dd>${escapeHtml(f.guidance.howToFix)}${f.guidance.techniques.length ? `<br><span style="color:#6a7075">Techniques: ${escapeHtml(f.guidance.techniques.join(', '))}</span>` : ''}</dd>`
-            : ''
-        }
       </dl>
     </article>`;
 }
@@ -85,14 +90,11 @@ function renderChecklistItem(item: ChecklistItem): string {
   const newBadge = item.introducedIn === '2.2'
     ? ' <span style="font-size:11px;color:#1565c0">(WCAG 2.2)</span>'
     : '';
-  const guidanceHint = item.guidance
-    ? `<br><span style="color:#6a7075;font-size:12px">${escapeHtml(item.guidance.summary)}</span>`
-    : '';
 
   return `
     <tr>
       <td><code>${escapeHtml(item.id)}</code>${newBadge}</td>
-      <td>${escapeHtml(item.title)}${guidanceHint}</td>
+      <td>${escapeHtml(item.title)}</td>
       <td>${escapeHtml(item.principle)}</td>
       <td>${statusBadge(item.status)}</td>
       <td style="white-space:nowrap">
@@ -110,12 +112,17 @@ function renderFindingGroup(group: FindingGroup, checklist: ChecklistItem[]): st
     <article class="finding" style="border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:12px">
       <header style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         ${impactBadge(group.impact)}
+        ${confidenceBadge(group.confidence)}
         <strong>${escapeHtml(group.summary)}</strong>
         <span style="color:#1565c0;font-size:13px">${group.instanceCount} instance${group.instanceCount === 1 ? '' : 's'}</span>
       </header>
       <p style="color:#555;margin:0 0 8px"><strong>Hierarchy:</strong> ${escapeHtml(hierarchy)}</p>
       <dl style="margin:0;font-size:14px">
         <dt><strong>Rule</strong></dt><dd><code>${escapeHtml(group.rule)}</code></dd>
+        <dt><strong>Owner hint</strong></dt><dd>${escapeHtml(group.suggestedOwner)}</dd>
+        <dt><strong>Estimated effort</strong></dt><dd>${group.estimatedEffort}</dd>
+        <dt><strong>Route risk</strong></dt><dd>${group.routeRisk}</dd>
+        <dt><strong>Acceptance</strong></dt><dd>${escapeHtml(group.acceptanceCriteria)}</dd>
         <dt><strong>Routes</strong></dt><dd>${group.routes.map((r) => `<code>${escapeHtml(r)}</code>`).join(', ')}</dd>
         <dt><strong>Selectors</strong></dt><dd>${group.selectors.slice(0, 5).map((s) => `<code>${escapeHtml(s)}</code>`).join(', ')}${group.selectors.length > 5 ? ` +${group.selectors.length - 5} more` : ''}</dd>
         ${group.filePaths.length ? `<dt><strong>Files</strong></dt><dd>${group.filePaths.slice(0, 5).map((f) => `<code>${escapeHtml(f)}</code>`).join(', ')}</dd>` : ''}
@@ -123,20 +130,49 @@ function renderFindingGroup(group: FindingGroup, checklist: ChecklistItem[]): st
     </article>`;
 }
 
+function renderStaticByFile(violations: AuditFinding[]): string {
+  const staticFindings = violations.filter((f) => f.source === 'static' && f.filePath);
+  const byFile = new Map<string, AuditFinding[]>();
+
+  for (const finding of staticFindings) {
+    const file = finding.filePath!;
+    const list = byFile.get(file) ?? [];
+    list.push(finding);
+    byFile.set(file, list);
+  }
+
+  if (!byFile.size) {
+    return '<p>No static file-level findings in this run.</p>';
+  }
+
+  return [...byFile.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(
+      ([file, list]) => `
+      <article class="finding" style="border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:12px">
+        <h3 style="margin:0 0 8px"><code>${escapeHtml(file)}</code> (${list.length})</h3>
+        <ul>
+          ${list.map((f) => `<li>${impactBadge(f.impact)} <code>${escapeHtml(f.rule)}</code> at line ${f.line ?? '?'}: ${escapeHtml(f.summary)}</li>`).join('')}
+        </ul>
+      </article>`,
+    )
+    .join('');
+}
+
 export function writeHtmlReport(report: AuditReport, outputPath: string): void {
-  const violations = report.findings.filter((f) => !f.needsManualReview);
-  const manual = report.findings.filter((f) => f.needsManualReview);
+  const violations = report.findings.filter((f) => !f.needsManualReview && !f.waived);
+  const incomplete = report.findings.filter((f) => f.needsManualReview);
+  const waivedFindings = report.findings.filter((f) => f.waived);
   const statusColor = report.summary.passed ? '#2e7d32' : '#c62828';
   const statusText = report.summary.passed ? 'PASSED' : 'FAILED';
   const checklist = report.wcagChecklist ?? [];
   const checklistSummary = report.checklistSummary;
   const w3c = report.w3cReferences;
-
-  const manualReviewItems = checklist.filter((c) => c.status === 'needs-manual-review');
-  const waivedFindings = report.findings.filter((f) => f.waived);
   const principleSummary = summarizeChecklistByPrinciple(checklist);
   const wcag22Items = checklist.filter((c) => WCAG_22_ONLY_CRITERIA_IDS.includes(c.id));
   const findingGroups = report.findingGroups ?? [];
+  const ciBlocking = violations.filter((f) => f.impact === 'critical' || f.impact === 'serious');
+  const mustFix = findingGroups.filter((g) => g.impact === 'critical' || g.impact === 'serious');
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -174,14 +210,14 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
         <span>Status</span>
         <strong style="color:${statusColor}">${statusText}</strong>
       </div>
+      <div class="card"><span>CI-blocking</span><strong>${ciBlocking.length}</strong></div>
       <div class="card"><span>Violations</span><strong>${report.summary.violations}</strong></div>
-      <div class="card"><span>Manual review (axe)</span><strong>${report.summary.incomplete}</strong></div>
-      <div class="card"><span>Critical</span><strong>${report.summary.byImpact.critical}</strong></div>
-      <div class="card"><span>Serious</span><strong>${report.summary.byImpact.serious}</strong></div>
+      <div class="card"><span>Manual review</span><strong>${report.summary.incomplete}</strong></div>
       <div class="card"><span>Waived</span><strong>${report.summary.waived ?? 0}</strong></div>
+      <div class="card"><span>Confidence (High/Heuristic/Manual)</span><strong>${report.summary.confidence['high-confidence-automated']}/${report.summary.confidence.heuristic}/${report.summary.confidence['manual-required']}</strong></div>
       ${
-        checklistSummary
-          ? `<div class="card"><span>Criteria needing manual review</span><strong>${checklistSummary.needsManualReview}</strong></div>`
+        report.summary.automationCoverage
+          ? `<div class="card"><span>Automated WCAG coverage</span><strong>${report.summary.automationCoverage.automatedSignalPct}%</strong></div>`
           : ''
       }
     </div>
@@ -189,16 +225,62 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
     ${
       report.baselineDiff
         ? `<section>
-      <h2>Baseline comparison</h2>
+      <h2>1) What changed since baseline</h2>
       <p class="note">Compared to baseline from ${escapeHtml(report.baselineDiff.baselineTimestamp)}.</p>
       <div class="summary">
         <div class="card"><span>New issues</span><strong style="color:#c62828">${report.baselineDiff.newCount}</strong></div>
         <div class="card"><span>Fixed issues</span><strong style="color:#2e7d32">${report.baselineDiff.fixedCount}</strong></div>
         <div class="card"><span>Violation delta</span><strong>${report.baselineDiff.violationDelta >= 0 ? '+' : ''}${report.baselineDiff.violationDelta}</strong></div>
+        <div class="card"><span>Regressed</span><strong>${report.baselineDiff.regressed ? 'Yes' : 'No'}</strong></div>
       </div>
     </section>`
         : ''
     }
+
+    <section>
+      <h2>2) Top grouped fix patterns</h2>
+      <p class="note">Fix once, resolve many. Includes owner hints, effort, confidence, and acceptance criteria.</p>
+      ${findingGroups.length ? findingGroups.slice(0, 25).map((g) => renderFindingGroup(g, checklist)).join('') : '<p>No grouped patterns available.</p>'}
+    </section>
+
+    <section>
+      <h2>3) CI-blocking findings</h2>
+      ${ciBlocking.length ? ciBlocking.map((f) => renderFinding(f, checklist)).join('') : '<p>No critical/serious blockers.</p>'}
+    </section>
+
+    <section>
+      <h2>4) Static findings by file</h2>
+      ${renderStaticByFile(violations)}
+    </section>
+
+    ${
+      wcag22Items.length
+        ? `<section>
+      <h2>5) WCAG 2.2-only criteria</h2>
+      <ul>${wcag22Items.map((item) => `<li><strong>${escapeHtml(item.id)}</strong> ${escapeHtml(item.title)} — ${statusBadge(item.status)}</li>`).join('')}</ul>
+    </section>`
+        : ''
+    }
+
+    <section>
+      <h2>6) Manual verification queue</h2>
+      ${incomplete.length ? incomplete.map((f) => renderFinding(f, checklist)).join('') : '<p>No manual/heuristic findings requiring follow-up.</p>'}
+    </section>
+
+    <section>
+      <h2>7) Waiver governance</h2>
+      ${
+        report.waivers
+          ? `<div class="summary">
+        <div class="card"><span>Active waivers</span><strong>${report.waivers.active.length}</strong></div>
+        <div class="card"><span>Expired</span><strong>${report.waivers.expired.length}</strong></div>
+        <div class="card"><span>Expiring in 7d</span><strong>${report.waivers.expiringSoon?.length ?? 0}</strong></div>
+        <div class="card"><span>Expiring in 30d</span><strong>${report.waivers.expiringIn30Days?.length ?? 0}</strong></div>
+      </div>`
+          : '<p>No waiver file configured.</p>'
+      }
+      ${waivedFindings.length ? `<p class="note">Waived findings are excluded from thresholds and should not be fixed unless waivers expire.</p>${waivedFindings.map((f) => renderFinding(f, checklist)).join('')}` : '<p>No waived findings in this run.</p>'}
+    </section>
 
     ${
       principleSummary.length
@@ -215,49 +297,12 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
     }
 
     ${
-      wcag22Items.length
-        ? `<section>
-      <h2>WCAG 2.2-only criteria</h2>
-      <ul>${wcag22Items.map((item) => `<li><strong>${escapeHtml(item.id)}</strong> ${escapeHtml(item.title)} — ${statusBadge(item.status)}</li>`).join('')}</ul>
-    </section>`
-        : ''
-    }
-
-    ${
-      report.staticAudit
-        ? `<section>
-      <h2>Static analysis (Phase 5)</h2>
-      <p><strong>${report.staticAudit.filesScanned}</strong> files scanned via ESLint jsx-a11y.</p>
-      ${report.staticAudit.warnings.length ? `<ul>${report.staticAudit.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul>` : ''}
-    </section>`
-        : ''
-    }
-
-    ${
       checklistSummary
         ? `<section>
-      <h2>WCAG ${escapeHtml(report.meta.wcag.version)} ${escapeHtml(report.meta.wcag.level)} coverage summary</h2>
-      <div class="note" style="margin-bottom:16px">
-        Full checklist of all ${checklistSummary.total} success criteria at your target level.
-        Automated tools cannot test every criterion — items marked <strong>Manual review</strong> need human verification.
-        Official references: <a href="${w3c ? escapeHtml(w3c.overview) : '#'}" target="_blank" rel="noopener">WCAG Overview</a>,
-        <a href="${w3c ? escapeHtml(w3c.quickRef) : '#'}" target="_blank" rel="noopener">Quick Reference</a>.
-      </div>
-      <div class="summary" style="margin-bottom:16px">
-        <div class="card"><span>Failed</span><strong style="color:#c62828">${checklistSummary.failed}</strong></div>
-        <div class="card"><span>Incomplete</span><strong style="color:#6a1b9a">${checklistSummary.incomplete}</strong></div>
-        <div class="card"><span>Automated pass</span><strong style="color:#2e7d32">${checklistSummary.automatedPass}</strong></div>
-        <div class="card"><span>Needs manual review</span><strong>${checklistSummary.needsManualReview}</strong></div>
-      </div>
+      <h2>WCAG checklist detail</h2>
       <table>
         <thead>
-          <tr>
-            <th>Criterion</th>
-            <th>Title</th>
-            <th>Principle</th>
-            <th>Status</th>
-            <th>W3C</th>
-          </tr>
+          <tr><th>Criterion</th><th>Title</th><th>Principle</th><th>Status</th><th>W3C</th></tr>
         </thead>
         <tbody>
           ${checklist.map(renderChecklistItem).join('')}
@@ -267,79 +312,16 @@ export function writeHtmlReport(report: AuditReport, outputPath: string): void {
         : ''
     }
 
-    ${
-      report.waivers?.expired.length
-        ? `<section>
-      <h2>Expired waivers (${report.waivers.expired.length})</h2>
-      <p class="note" style="border-left-color:#e65100">These waivers have expired and no longer suppress findings. Renew or fix the underlying issues.</p>
-      <ul>${report.waivers.expired.map((w) => `<li><strong>${escapeHtml(w.id)}</strong> — ${escapeHtml(w.reason)} (expired ${escapeHtml(w.expires)}, owner: ${escapeHtml(w.owner)})</li>`).join('')}</ul>
-    </section>`
-        : ''
-    }
-
     <section>
-      <h2>Agent review brief</h2>
-      <p class="note">Open <code>a11y-reports/agent-review.md</code> and <code>a11y-reports/wcag-context.json</code> in Cursor for AI-guided fixes. Regenerate with <code>npx a11y-auditor review</code>.</p>
+      <h2>Agent workflow</h2>
+      <p class="note">Open <code>a11y-reports/agent-review.md</code> and <code>a11y-reports/wcag-context.json</code> for AI-guided remediation. Prioritize grouped CI blockers first, then static by-file fixes.</p>
     </section>
-
-    ${
-      findingGroups.length
-        ? `<section>
-      <h2>Grouped violations (${findingGroups.length} patterns)</h2>
-      <p class="note">Same rule + criterion grouped across routes. Fix the pattern once to resolve multiple instances.</p>
-      ${findingGroups.slice(0, 30).map((g) => renderFindingGroup(g, checklist)).join('')}
-    </section>`
-        : ''
-    }
-
-    ${
-      waivedFindings.length
-        ? `<section>
-      <h2>Waived findings (${waivedFindings.length})</h2>
-      <p class="note">These are excluded from CI thresholds. Do not fix unless the waiver expires.</p>
-      ${waivedFindings.map((f) => renderFinding(f, checklist)).join('')}
-    </section>`
-        : ''
-    }
-
-    ${
-      report.behavioralAudit
-        ? `<section>
-      <h2>Behavioral checks (Phase 2)</h2>
-      <p class="note">ACT-aligned Playwright tests beyond axe: page title, language, landmarks, skip links, reflow, target size, and more.</p>
-      <p><strong>${report.behavioralAudit.checksRun}</strong> checks passed. Passed: <code>${report.behavioralAudit.passedChecks.map(escapeHtml).join('</code>, <code>')}</code></p>
-    </section>`
-        : ''
-    }
-
-    <section>
-      <h2>Violations (${violations.length})</h2>
-      ${violations.length ? violations.map((f) => renderFinding(f, checklist)).join('') : '<p>No automated violations detected.</p>'}
-    </section>
-
-    <section>
-      <h2>Axe incomplete / manual review queue (${manual.length})</h2>
-      ${manual.length ? manual.map((f) => renderFinding(f, checklist)).join('') : '<p>No axe items requiring manual review.</p>'}
-    </section>
-
-    ${
-      manualReviewItems.length
-        ? `<section>
-      <h2>Success criteria requiring manual review (${manualReviewItems.length})</h2>
-      <p class="note">These WCAG criteria were not fully tested by automation. Review using W3C Understanding docs.</p>
-      <ul>
-        ${manualReviewItems.map((item) => `<li><strong>${escapeHtml(item.id)} ${escapeHtml(item.title)}</strong> — <a href="${escapeHtml(item.w3c.understanding)}" target="_blank" rel="noopener">Understanding</a></li>`).join('')}
-      </ul>
-    </section>`
-        : ''
-    }
 
     ${
       report.keyboardAudit?.focusOrder.length
         ? `<section>
       <h2>Keyboard focus order</h2>
       <ol>${report.keyboardAudit.focusOrder.map((item) => `<li><code>${escapeHtml(item)}</code></li>`).join('')}</ol>
-      ${report.keyboardAudit.issues.length ? `<p><strong>Issues:</strong> ${report.keyboardAudit.issues.map(escapeHtml).join('; ')}</p>` : ''}
     </section>`
         : ''
     }

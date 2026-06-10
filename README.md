@@ -67,6 +67,8 @@ Add to `package.json`:
 - **Full W3C context (Phase 6)** — `wcag-context.json`, principle-grouped agent brief, WCAG 2.2-only criteria, upgraded Cursor skill
 - **Grouped violations** — same rule+criterion deduped across routes; baseline regression diff
 - **Baseline diff** — new/fixed issues and violation delta vs prior report
+- **Confidence labels** — high-confidence automated, heuristic, manual-required
+- **Owner-ready grouping** — suggested owner, effort (S/M/L), route risk, acceptance criteria
 - Multi-route scanning with auth profiles (`storageState`)
 - Page variants: default, dark mode, 200% zoom, reduced motion
 - Scenario steps (open menus, dialogs) before scan
@@ -84,6 +86,16 @@ After `a11y-auditor audit`, the output directory (default `a11y-reports/`) inclu
 - `agent-review.md` — AI-ready remediation brief
 - `wcag-context.json` — principle/guideline/criterion hierarchy for agents
 - `report.sarif` — if `output.formats` includes `'sarif'`
+
+`report.html` is ordered for triage:
+
+1. Baseline changes (new/fixed/regressed)
+2. Top grouped fix patterns
+3. CI-blocking findings
+4. Static findings by file
+5. WCAG 2.2-only criteria
+6. Manual verification queue
+7. Waiver governance (expiring buckets)
 
 ## Documentation
 
