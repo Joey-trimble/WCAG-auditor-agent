@@ -21,6 +21,26 @@ import { getReportW3cReferences } from './wcag/urls';
 
 const PACKAGE_VERSION = '1.7.0';
 
+function getWaiverBuckets(waivers: ReturnType<typeof loadWaivers>) {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const active = waivers.filter((w) => {
+    const ts = new Date(w.expires).getTime();
+    return !Number.isNaN(ts) && ts >= now;
+  });
+  const byDays = (days: number) =>
+    active.filter((w) => {
+      const ts = new Date(w.expires).getTime();
+      return ts <= now + days * dayMs;
+    });
+
+  return {
+    expiringSoon: byDays(7),
+    expiringIn30Days: byDays(30),
+    expiringIn60Days: byDays(60),
+  };
+}
+
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/$/, '');
   const route = path.startsWith('/') ? path : `/${path}`;
@@ -244,6 +264,21 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
   }
 
   const wcagChecklist = enrichChecklist(buildWcagChecklist(config, enrichedFindings, passedCriteria));
+  const confidence = {
+    'high-confidence-automated': violations.filter((f) => f.source === 'axe' || f.source === 'static').length,
+    heuristic: violations.filter((f) => f.source === 'behavioral' || f.source === 'keyboard').length,
+    'manual-required': incomplete.length,
+  } as const;
+  const automationCoverage = wcagChecklist.length
+    ? {
+        automatedSignal:
+          wcagChecklist.filter((c) => c.status === 'failed' || c.status === 'incomplete' || c.status === 'automated-pass').length,
+        manualOnly: wcagChecklist.filter((c) => c.status === 'needs-manual-review').length,
+        automatedSignalPct: Math.round(
+          (wcagChecklist.filter((c) => c.status !== 'needs-manual-review').length / wcagChecklist.length) * 100,
+        ),
+      }
+    : undefined;
 
   const report: AuditReport = {
     meta: {
@@ -261,11 +296,18 @@ export async function audit(config: AuditorConfig): Promise<AuditReport> {
       byImpact,
       waived: waived.length,
       passed: false,
+      confidence: {
+        'high-confidence-automated': confidence['high-confidence-automated'],
+        heuristic: confidence.heuristic,
+        'manual-required': confidence['manual-required'],
+      },
+      automationCoverage,
     },
     waivers: waiverEntries.length
       ? {
           active: getActiveWaivers(waiverEntries),
           expired: getExpiredWaivers(waiverEntries),
+          ...getWaiverBuckets(waiverEntries),
         }
       : undefined,
     findings: enrichedFindings,

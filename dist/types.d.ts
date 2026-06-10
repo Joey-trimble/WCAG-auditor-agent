@@ -129,6 +129,8 @@ export type AuditFinding = {
     waiverId?: string;
     waiverReason?: string;
 };
+export type FindingConfidence = 'high-confidence-automated' | 'heuristic' | 'manual-required';
+export type FindingEffort = 'S' | 'M' | 'L';
 export type FindingGroup = {
     key: string;
     rule: string;
@@ -141,6 +143,11 @@ export type FindingGroup = {
     selectors: string[];
     sources: AuditFinding['source'][];
     filePaths: string[];
+    confidence: FindingConfidence;
+    estimatedEffort: FindingEffort;
+    suggestedOwner: string;
+    routeRisk: 'high' | 'medium' | 'low';
+    acceptanceCriteria: string;
     instances: AuditFinding[];
 };
 export type BaselineDiff = {
@@ -181,10 +188,19 @@ export type AuditReport = {
         byImpact: Record<Impact, number>;
         waived: number;
         passed: boolean;
+        confidence: Record<FindingConfidence, number>;
+        automationCoverage?: {
+            automatedSignal: number;
+            manualOnly: number;
+            automatedSignalPct: number;
+        };
     };
     waivers?: {
         active: WaiverEntry[];
         expired: WaiverEntry[];
+        expiringSoon?: WaiverEntry[];
+        expiringIn30Days?: WaiverEntry[];
+        expiringIn60Days?: WaiverEntry[];
     };
     findings: AuditFinding[];
     findingGroups?: FindingGroup[];
