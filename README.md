@@ -28,6 +28,16 @@ npx a11y-auditor audit
 open a11y-reports/report.html
 ```
 
+Optional regression comparison:
+
+```bash
+# Save a baseline from a known-good run
+cp a11y-reports/report.json a11y-reports/baseline.json
+
+# Compare current run against baseline
+npx a11y-auditor audit --baseline ./a11y-reports/baseline.json
+```
+
 Add to `package.json`:
 
 ```json
@@ -41,6 +51,7 @@ Add to `package.json`:
 | Command | Description |
 |---------|-------------|
 | `a11y-auditor audit` | Run scan using `a11y-auditor.config.ts` |
+| `a11y-auditor audit --baseline <path>` | Run scan and include regression diff against prior `report.json` |
 | `a11y-auditor review` | Generate `agent-review.md` from existing report |
 | `a11y-auditor init` | Scaffold config, CI workflow, Cursor skill |
 
@@ -55,12 +66,24 @@ Add to `package.json`:
 - **Static analysis (Phase 5)** — optional ESLint jsx-a11y merge with file paths
 - **Full W3C context (Phase 6)** — `wcag-context.json`, principle-grouped agent brief, WCAG 2.2-only criteria, upgraded Cursor skill
 - **Grouped violations** — same rule+criterion deduped across routes; baseline regression diff
+- **Baseline diff** — new/fixed issues and violation delta vs prior report
 - Multi-route scanning with auth profiles (`storageState`)
-- Page variants: default, dark mode, 200% zoom
+- Page variants: default, dark mode, 200% zoom, reduced motion
 - Scenario steps (open menus, dialogs) before scan
 - JSON + HTML reports
 - CI-friendly exit codes
 - Cursor skill for agent-driven review
+
+## Report artifacts
+
+After `a11y-auditor audit`, the output directory (default `a11y-reports/`) includes:
+
+- `report.json` — full machine-readable audit data
+- `report.html` — human-readable report with grouped findings
+- `report.pdf` — shareable PDF export of the HTML report (Print/Save as PDF from `report.html`)
+- `agent-review.md` — AI-ready remediation brief
+- `wcag-context.json` — principle/guideline/criterion hierarchy for agents
+- `report.sarif` — if `output.formats` includes `'sarif'`
 
 ## Documentation
 
